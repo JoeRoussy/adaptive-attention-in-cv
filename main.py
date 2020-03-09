@@ -12,11 +12,13 @@ from model import ResNet50, ResNet38, ResNet26
 from preprocess import load_data
 
 
-def adjust_learning_rate(optimizer, epoch, args):
-    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+'''
+To do:
+1. Use learning rate decay on optimizer (they did this in paper)
+2. Check that train_loader shuffles batches after each epoch
+3. Run main function with several different hyper parameters
+'''
+
 
 
 def train(model, train_loader, optimizer, criterion, epoch, args, logger):
@@ -25,7 +27,6 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger):
     train_acc = 0.0
     step = 0
     for data, target in train_loader:
-        adjust_learning_rate(optimizer, epoch, args)
         if args.cuda:
             data, target = data.cuda(), target.cuda()
 
@@ -43,12 +44,9 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger):
         if step % args.print_interval == 0:
             # print("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc), end='')
             logger.info("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc))
-            for param_group in optimizer.param_groups:
-                # print(",  Current learning rate is: {}".format(param_group['lr']))
-                logger.info("Current learning rate is: {}".format(param_group['lr']))
 
 
-def eval(model, test_loader, args):
+def eval(model, test_loader, args, is_valid=True):
     print('evaluation ...')
     model.eval()
     correct = 0
@@ -61,7 +59,8 @@ def eval(model, test_loader, args):
             correct += prediction.eq(target.data).sum()
 
     acc = 100. * float(correct) / len(test_loader.dataset)
-    print('Test acc: {0:.2f}'.format(acc))
+    data_set = 'Validation' if is_valid else "Test"
+    print(data_set + ' acc: {0:.2f}'.format(acc))
     return acc
 
 
@@ -76,7 +75,7 @@ def get_model_parameters(model):
 
 
 def main(args, logger):
-    train_loader, test_loader = load_data(args)
+    train_loader, valid_loader, test_loader = load_data(args)
     if args.dataset == 'CIFAR10':
         num_classes = 10
     elif args.dataset == 'CIFAR100':
@@ -84,22 +83,23 @@ def main(args, logger):
     elif args.dataset == 'IMAGENET':
         num_classes = 1000
 
-    print('img_size: {}, num_classes: {}, stem: {}'.format(args.img_size, num_classes, args.stem))
+    print('img_size: {}, num_classes: {}'.format(args.img_size, num_classes))
+    model = None
     if args.model_name == 'ResNet26':
         print('Model Name: {0}'.format(args.model_name))
-        model = ResNet26(num_classes=num_classes, stem=args.stem)
+        model = ResNet26(num_classes=num_classes)
     elif args.model_name == 'ResNet38':
         print('Model Name: {0}'.format(args.model_name))
-        model = ResNet38(num_classes=num_classes, stem=args.stem)
+        model = ResNet38(num_classes=num_classes)
     elif args.model_name == 'ResNet50':
         print('Model Name: {0}'.format(args.model_name))
-        model = ResNet50(num_classes=num_classes, stem=args.stem)
+        model = ResNet50(num_classes=num_classes)
 
     if args.pretrained_model:
-        filename = 'best_model_' + str(args.dataset) + '_' + str(args.model_name) + '_' + str(args.stem) + '_ckpt.tar'
+        filename = 'model_' + str(args.dataset) + '_' + str(args.model_name)  + '_ckpt.tar'
         print('filename :: ', filename)
-        file_path = os.path.join('./checkpoint', filename)
-        checkpoint = torch.load(file_path)
+
+        checkpoint = torch.load(filename)
 
         model.load_state_dict(checkpoint['state_dict'])
         start_epoch = checkpoint['epoch']
@@ -107,6 +107,12 @@ def main(args, logger):
         model_parameters = checkpoint['parameters']
         print('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
         logger.info('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
+
+        #Compute test accuracy
+        test_acc = eval(model, test_loader, args, is_valid=False)
+        print('TEST ACCURACY: ',test_acc)
+        return
+
     else:
         start_epoch = 1
         best_acc = 0.0
@@ -119,20 +125,20 @@ def main(args, logger):
     print("Number of model parameters: ", get_model_parameters(model))
     logger.info("Number of model parameters: {0}".format(get_model_parameters(model)))
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    filename = 'model_' + str(args.dataset) + '_' + str(args.model_name) + '_ckpt.tar'
+    print('will save model as filename :: ', filename)
 
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters())  #Try altering initial settings of Adam later.
     for epoch in range(start_epoch, args.epochs + 1):
         train(model, train_loader, optimizer, criterion, epoch, args, logger)
-        eval_acc = eval(model, test_loader, args)
+        eval_acc = eval(model, valid_loader, args, is_valid=True)
 
         is_best = eval_acc > best_acc
         best_acc = max(eval_acc, best_acc)
 
         if not os.path.isdir('checkpoint'):
             os.mkdir('checkpoint')
-        filename = 'model_' + str(args.dataset) + '_' + str(args.model_name) + '_' + str(args.stem) + '_ckpt.tar'
-        print('filename :: ', filename)
 
         parameters = get_model_parameters(model)
 
@@ -157,14 +163,16 @@ def main(args, logger):
 
 
 def save_checkpoint(state, is_best, filename):
-    file_path = os.path.join('./checkpoint', filename)
-    torch.save(state, file_path)
-    best_file_path = os.path.join('./checkpoint', 'best_' + filename)
     if is_best:
-        print('best Model Saving ...')
-        shutil.copyfile(file_path, best_file_path)
+        print('Saving best model')
+        torch.save(state, filename)
+
 
 
 if __name__ == '__main__':
     args, logger = get_args()
+    main(args, logger)
+
+    #Run on test set
+    args.pretrained_model = True
     main(args, logger)
