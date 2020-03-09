@@ -2,7 +2,6 @@ import torch
 
 from torchvision import datasets, transforms
 
-
 def load_data(args):
     print('Load Dataset :: {}'.format(args.dataset))
     if args.dataset == 'CIFAR10':
@@ -24,8 +23,20 @@ def load_data(args):
             )
         ])
 
+        train_data = datasets.CIFAR10('data', train=True, download=True, transform=transform_train)
+        train_len = int(len(j)*0.8)
+        val_len = len(j) - train_len
+        train_set, valid_set = torch.utils.data.random_split(train_data, [train_len, val_len])
+        valid_set.transform = transform_test #Don't want to apply flips and random crops to this
         train_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR10('data', train=True, download=True, transform=transform_train),
+            train_set,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.num_workers
+        )
+
+        valid_loader = torch.utils.data.DataLoader(
+            valid_set,
             batch_size=args.batch_size,
             shuffle=True,
             num_workers=args.num_workers
@@ -95,4 +106,18 @@ def load_data(args):
     elif args.dataset == 'IMAGENET':
         pass
 
-    return train_loader, test_loader
+    return train_loader, valid_loader, test_loader
+
+
+#This is just for testing purposes
+class Args:
+    def __init__(self):
+        self.batch_size = 32
+        self.num_workers = 1
+        self.dataset = 'CIFAR10'
+
+if __name__ == '__main__':
+
+    #need to split the training set into train/valid
+    args = Args()
+    train, valid, test = load_data(args)
