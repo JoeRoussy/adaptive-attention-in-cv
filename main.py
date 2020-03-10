@@ -15,11 +15,10 @@ from preprocess import load_data
 '''
 To do:
 1. Use learning rate decay on optimizer (they did this in paper)
-2. Check that train_loader shuffles batches after each epoch
 3. Run main function with several different hyper parameters
+
+Early stopping
 '''
-
-
 
 def train(model, train_loader, optimizer, criterion, epoch, args, logger):
     model.train()
@@ -76,6 +75,7 @@ def get_model_parameters(model):
 
 def main(args, logger):
     train_loader, valid_loader, test_loader = load_data(args)
+    num_classes = None
     if args.dataset == 'CIFAR10':
         num_classes = 10
     elif args.dataset == 'CIFAR100':
@@ -87,13 +87,13 @@ def main(args, logger):
     model = None
     if args.model_name == 'ResNet26':
         print('Model Name: {0}'.format(args.model_name))
-        model = ResNet26(num_classes=num_classes)
+        model = ResNet26(num_classes=num_classes, all_attention=args.all_attention, small_version=args.small_version)
     elif args.model_name == 'ResNet38':
         print('Model Name: {0}'.format(args.model_name))
-        model = ResNet38(num_classes=num_classes)
+        model = ResNet38(num_classes=num_classes, all_attention=args.all_attention)
     elif args.model_name == 'ResNet50':
         print('Model Name: {0}'.format(args.model_name))
-        model = ResNet50(num_classes=num_classes)
+        model = ResNet50(num_classes=num_classes, all_attention=args.all_attention)
 
     if args.pretrained_model:
         filename = 'model_' + str(args.dataset) + '_' + str(args.model_name)  + '_ckpt.tar'
@@ -113,9 +113,9 @@ def main(args, logger):
         print('TEST ACCURACY: ',test_acc)
         return
 
-    else:
-        start_epoch = 1
-        best_acc = 0.0
+    start_epoch = 1
+    best_acc = 0.0
+    best_epoch = 1
 
     if args.cuda:
         if torch.cuda.device_count() > 1:
@@ -136,6 +136,11 @@ def main(args, logger):
 
         is_best = eval_acc > best_acc
         best_acc = max(eval_acc, best_acc)
+        if is_best:
+            best_epoch = epoch
+        elif epoch - best_epoch > 10:
+            print('EARLY STOPPING')
+            break
 
         if not os.path.isdir('checkpoint'):
             os.mkdir('checkpoint')

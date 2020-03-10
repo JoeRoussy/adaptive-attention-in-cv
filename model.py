@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from attention import AttentionConv, AttentionStem
+from attention import AttentionConv
 
 
 class Bottleneck(nn.Module):
@@ -21,9 +21,10 @@ class Bottleneck(nn.Module):
             nn.BatchNorm2d(width),
             nn.ReLU(),
         )
+
         self.conv2 = nn.Sequential(
-            layer(width, width, kernel_size=7, padding=3,*additional_args),
-            #AttentionConv(width, width, kernel_size=7, padding=3, groups=8),
+            layer(width, width, kernel_size=7, padding=3, **additional_args), #,*additional_args),
+            # AttentionConv(width, width, kernel_size=7, padding=3, groups=8),
             nn.BatchNorm2d(width),
             nn.ReLU(),
         )
@@ -53,14 +54,16 @@ class Bottleneck(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=1000):
+    def __init__(self, block, num_blocks, num_classes=1000, all_attention=False, small_version=False):
         super(Model, self).__init__()
-        self.in_places = 64
+        divider = 2 if small_version else 1
+        self.in_places = 64//divider
+        self.all_attention = all_attention
 
         self.init = nn.Sequential(
             # CIFAR10
-            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
-            nn.BatchNorm2d(64),
+            nn.Conv2d(3, 64 // divider, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(64 // divider),
             nn.ReLU()
 
             # For ImageNet
@@ -70,17 +73,17 @@ class Model(nn.Module):
             # nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
 
-        self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
-        self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
-        self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
-        self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
-        self.dense = nn.Linear(512 * block.expansion, num_classes)
+        self.layer1 = self._make_layer(block, 64//divider, num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(block, 128//divider, num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block, 256//divider, num_blocks[2], stride=2)
+        self.layer4 = self._make_layer(block, 512//divider, num_blocks[3], stride=2)
+        self.dense = nn.Linear(512//divider * block.expansion, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
-            layers.append(block(self.in_places, planes, stride)) #in_places is #input_channels
+            layers.append(block(self.in_places, planes, stride, all_attention=self.all_attention)) #in_places is #input_channels
             self.in_places = planes * block.expansion
         return nn.Sequential(*layers)
 
@@ -97,15 +100,17 @@ class Model(nn.Module):
         return out
 
 
-def ResNet26(num_classes=1000):
-    return Model(Bottleneck, [1, 2, 4, 1], num_classes=num_classes)
+def ResNet26(num_classes=1000, all_attention=False, small_version=False):
+    num_blocks = [1,2,2,1] if small_version else [1, 2, 4, 1]
+    return Model(Bottleneck, num_blocks, num_classes=num_classes,
+                 all_attention=all_attention, small_version=small_version)
 
 
-def ResNet38(num_classes=1000):
+def ResNet38(num_classes=1000, all_attention=False):
     return Model(Bottleneck, [2, 3, 5, 2], num_classes=num_classes)
 
 
-def ResNet50(num_classes=1000):
+def ResNet50(num_classes=1000, all_attention=False):
     return Model(Bottleneck, [3, 4, 6, 3], num_classes=num_classes)
 
 
