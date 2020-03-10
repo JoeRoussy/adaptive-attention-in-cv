@@ -20,12 +20,20 @@ To do:
 Early stopping
 '''
 
+def adjust_learning_rate(optimizer, epoch, args):
+    """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
+    lr = args.lr * (0.1 ** (epoch // 30))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+
 def train(model, train_loader, optimizer, criterion, epoch, args, logger):
     model.train()
 
     train_acc = 0.0
     step = 0
     for data, target in train_loader:
+        adjust_learning_rate(optimizer, epoch, args)
         if args.cuda:
             data, target = data.cuda(), target.cuda()
 
@@ -129,7 +137,9 @@ def main(args, logger):
     print('will save model as filename :: ', filename)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters())  #Try altering initial settings of Adam later.
+    #optimizer = optim.Adam(model.parameters())  #Try altering initial settings of Adam later.
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+
     for epoch in range(start_epoch, args.epochs + 1):
         train(model, train_loader, optimizer, criterion, epoch, args, logger)
         eval_acc = eval(model, valid_loader, args, is_valid=True)
