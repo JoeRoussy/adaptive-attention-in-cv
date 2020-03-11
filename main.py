@@ -103,7 +103,11 @@ def main(args, logger):
         print('Model Name: {0}'.format(args.model_name))
         model = ResNet50(num_classes=num_classes, all_attention=args.all_attention)
 
-    if args.pretrained_model:
+    start_epoch = 1
+    best_acc = 0.0
+    best_epoch = 1
+
+    if args.pretrained_model or args.test:
         filename = 'model_' + str(args.dataset) + '_' + str(args.model_name)  + '_ckpt.tar'
         print('filename :: ', filename)
 
@@ -112,18 +116,17 @@ def main(args, logger):
         model.load_state_dict(checkpoint['state_dict'])
         start_epoch = checkpoint['epoch']
         best_acc = checkpoint['best_acc']
+        best_epoch = start_epoch
         model_parameters = checkpoint['parameters']
         print('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
         logger.info('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
 
-        #Compute test accuracy
-        test_acc = eval(model, test_loader, args, is_valid=False)
-        print('TEST ACCURACY: ',test_acc)
-        return
+        if args.test:
+            #Compute test accuracy
+            test_acc = eval(model, test_loader, args, is_valid=False)
+            print('TEST ACCURACY: ',test_acc)
+            return
 
-    start_epoch = 1
-    best_acc = 0.0
-    best_epoch = 1
 
     if args.cuda:
         if torch.cuda.device_count() > 1:
@@ -137,8 +140,12 @@ def main(args, logger):
     print('will save model as filename :: ', filename)
 
     criterion = nn.CrossEntropyLoss()
-    #optimizer = optim.Adam(model.parameters())  #Try altering initial settings of Adam later.
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+
+    optimizer = None
+    if args.use_adam:
+        optimizer = optim.Adam(model.parameters(), lr=args.adam_lr)  #Try altering initial settings of Adam later.
+    else:
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
     for epoch in range(start_epoch, args.epochs + 1):
         train(model, train_loader, optimizer, criterion, epoch, args, logger)
@@ -189,5 +196,5 @@ if __name__ == '__main__':
     main(args, logger)
 
     #Run on test set
-    args.pretrained_model = True
+    args.test = True
     main(args, logger)

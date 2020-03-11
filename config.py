@@ -29,6 +29,9 @@ def get_logger(filename):
 def get_args():
     parser = argparse.ArgumentParser('parameters')
 
+    parser.add_argument('--use_adam', type=bool, default=False, help='Whether or not to use Adam optimizer')
+    parser.add_argument('--adam_lr', type=float, default=0.001)
+    parser.add_argument('--test', type=bool, default=False, help='Whether or not on test set')
     parser.add_argument('--all_attention', type=bool, default=True)
     parser.add_argument('--small_version', type=bool, default=True)
     parser.add_argument('--dataset', type=str, default='CIFAR10', help='CIFAR10, CIFAR100, MNIST')
