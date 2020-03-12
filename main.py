@@ -16,6 +16,8 @@ from preprocess import load_data
 To do:
 1. Use learning rate decay on optimizer (they did this in paper)
 3. Run main function with several different hyper parameters
+4. Need to save state of optimizer if reloading with momentum or Adam
+
 
 Early stopping
 '''
@@ -123,6 +125,11 @@ def main(args, logger):
 
         if args.test:
             #Compute test accuracy
+            if args.cuda:
+                if torch.cuda.device_count() > 1:
+                    model = nn.DataParallel(model)
+                model = model.cuda()
+                
             test_acc = eval(model, test_loader, args, is_valid=False)
             print('TEST ACCURACY: ',test_acc)
             return
