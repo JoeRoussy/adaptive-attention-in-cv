@@ -95,6 +95,8 @@ def main(args, logger):
 
     print('img_size: {}, num_classes: {}'.format(args.img_size, num_classes))
     model = None
+    print('ALL ATTENTION: ',args.all_attention)
+    print('USE ADAM: ',args.use_adam)
     if args.model_name == 'ResNet26':
         print('Model Name: {0}'.format(args.model_name))
         model = ResNet26(num_classes=num_classes, all_attention=args.all_attention, small_version=args.small_version)
@@ -129,7 +131,7 @@ def main(args, logger):
                 if torch.cuda.device_count() > 1:
                     model = nn.DataParallel(model)
                 model = model.cuda()
-                
+
             test_acc = eval(model, test_loader, args, is_valid=False)
             print('TEST ACCURACY: ',test_acc)
             return

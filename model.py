@@ -15,7 +15,8 @@ class Bottleneck(nn.Module):
 
         additional_args = {'groups':groups} if all_attention else {'bias': False}
         layer = AttentionConv if all_attention else nn.Conv2d
-
+        kernel_size = 7 if all_attention else 3
+        padding = 3 if all_attention else 1
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, width, kernel_size=1, bias=False),
             nn.BatchNorm2d(width),
@@ -23,7 +24,7 @@ class Bottleneck(nn.Module):
         )
 
         self.conv2 = nn.Sequential(
-            layer(width, width, kernel_size=7, padding=3, **additional_args), #,*additional_args),
+            layer(width, width, kernel_size=kernel_size, padding=padding, **additional_args), #,*additional_args),
             # AttentionConv(width, width, kernel_size=7, padding=3, groups=8),
             nn.BatchNorm2d(width),
             nn.ReLU(),
@@ -100,8 +101,12 @@ class Model(nn.Module):
         return out
 
 
-def ResNet26(num_classes=1000, all_attention=False, small_version=False):
-    num_blocks = [1,2,2,1] if small_version else [1, 2, 4, 1]
+def ResNet26(num_classes=1000, all_attention=False, small_version=True):
+    if small_version:
+        num_blocks = [1, 2, 2, 1] if all_attention else [1]*4
+    else:
+        num_blocks = [1, 2, 4, 1]
+
     return Model(Bottleneck, num_blocks, num_classes=num_classes,
                  all_attention=all_attention, small_version=small_version)
 
