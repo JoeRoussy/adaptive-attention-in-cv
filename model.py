@@ -8,14 +8,16 @@ from attention import AttentionConv
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_channels, out_channels, stride=1, groups=1, base_width=64, all_attention=True):
+    def __init__(self, in_channels, out_channels, stride=1, groups=1, base_width=64,
+                 all_attention=True, attention_kernel=7):
+
         super(Bottleneck, self).__init__()
         self.stride = stride
         width = int(out_channels * (base_width / 64.)) * groups
 
         additional_args = {'groups':groups} if all_attention else {'bias': False}
         layer = AttentionConv if all_attention else nn.Conv2d
-        kernel_size = 7 if all_attention else 3
+        kernel_size = attention_kernel if all_attention else 3
         padding = 3 if all_attention else 1
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, width, kernel_size=1, bias=False),
@@ -55,11 +57,12 @@ class Bottleneck(nn.Module):
 
 
 class Model(nn.Module):
-    def __init__(self, block, num_blocks, num_classes=1000, all_attention=False, small_version=False):
+    def __init__(self, block, num_blocks, num_classes=1000, args=None):
         super(Model, self).__init__()
-        divider = 2 if small_version else 1
+        divider = 2 if args.small_version else 1
         self.in_places = 64//divider
-        self.all_attention = all_attention
+        self.all_attention = args.all_attention
+        self.attention_kernel = args.attention_kernel
 
         self.init = nn.Sequential(
             # CIFAR10
@@ -84,7 +87,8 @@ class Model(nn.Module):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
-            layers.append(block(self.in_places, planes, stride, all_attention=self.all_attention)) #in_places is #input_channels
+            layers.append(block(self.in_places, planes, stride, all_attention=self.all_attention,
+                                attention_kernel=self.attention_kernel)) #in_places is #input_channels
             self.in_places = planes * block.expansion
         return nn.Sequential(*layers)
 
@@ -101,14 +105,13 @@ class Model(nn.Module):
         return out
 
 
-def ResNet26(num_classes=1000, all_attention=False, small_version=True):
-    if small_version:
-        num_blocks = [1, 2, 2, 1] if all_attention else [1]*4
+def ResNet26(num_classes=1000, args=None):
+    if args.small_version:
+        num_blocks = [1, 2, 2, 1] if args.all_attention else [1]*4
     else:
         num_blocks = [1, 2, 4, 1]
 
-    return Model(Bottleneck, num_blocks, num_classes=num_classes,
-                 all_attention=all_attention, small_version=small_version)
+    return Model(Bottleneck, num_blocks, num_classes=num_classes, args=args)
 
 
 def ResNet38(num_classes=1000, all_attention=False):

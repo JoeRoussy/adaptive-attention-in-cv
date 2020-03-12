@@ -99,7 +99,7 @@ def main(args, logger):
     print('USE ADAM: ',args.use_adam)
     if args.model_name == 'ResNet26':
         print('Model Name: {0}'.format(args.model_name))
-        model = ResNet26(num_classes=num_classes, all_attention=args.all_attention, small_version=args.small_version)
+        model = ResNet26(num_classes=num_classes, args=args)
     elif args.model_name == 'ResNet38':
         print('Model Name: {0}'.format(args.model_name))
         model = ResNet38(num_classes=num_classes, all_attention=args.all_attention)

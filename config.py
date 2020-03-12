@@ -31,6 +31,7 @@ def get_args():
 
     parser.add_argument('--use_adam', type=bool, default=False, help='Whether or not to use Adam optimizer')
     parser.add_argument('--adam_lr', type=float, default=0.001)
+    parser.add_argument('--attention_kernel', type=int, default=7)
     parser.add_argument('--test', type=bool, default=False, help='Whether or not on test set')
     parser.add_argument('--all_attention', type=bool, default=False)
     parser.add_argument('--small_version', type=bool, default=True)
