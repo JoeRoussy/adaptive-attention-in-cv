@@ -18,7 +18,7 @@ class Bottleneck(nn.Module):
         additional_args = {'groups':groups} if all_attention else {'bias': False}
         layer = AttentionConv if all_attention else nn.Conv2d
         kernel_size = attention_kernel if all_attention else 3
-        padding = 3 if all_attention else 1
+        padding = 3 if kernel_size==7 else 1  #NEED TO CHANGE THIS FOR WHEN ADAPTIVE
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, width, kernel_size=1, bias=False),
             nn.BatchNorm2d(width),
