@@ -154,10 +154,16 @@ def main(args, logger):
     if args.use_adam:
         optimizer = optim.Adam(model.parameters(), lr=args.adam_lr)  #Try altering initial settings of Adam later.
     else:
-        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
+                              weight_decay=args.weight_decay, nesterov=True)
+
+    # TODO: Add linear warmup for lr as well as save the scheduler and optimizer for restarts.
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=0)
 
     for epoch in range(start_epoch, args.epochs + 1):
         train(model, train_loader, optimizer, criterion, epoch, args, logger)
+        scheduler.step()
+        print('Updated lr: ', optimizer.lr)
         eval_acc = eval(model, valid_loader, args, is_valid=True)
 
         is_best = eval_acc > best_acc

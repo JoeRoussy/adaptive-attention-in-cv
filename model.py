@@ -60,6 +60,12 @@ class Model(nn.Module):
     def __init__(self, block, num_blocks, num_classes=1000, args=None):
         super(Model, self).__init__()
         divider = 2 if args.small_version else 1
+        layer_channels = None #These two sets of channels give approximately equal #params between all_attention and all_conv
+        if args.all_attention:
+            layer_channels = [64,128,128,256,256]
+        else:
+            layer_channels = [64//divider, 128//divider, 256//divider, 512//divider]
+
         self.in_places = 64//divider
         self.all_attention = args.all_attention
         self.attention_kernel = args.attention_kernel
@@ -77,11 +83,11 @@ class Model(nn.Module):
             # nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
 
-        self.layer1 = self._make_layer(block, 64//divider, num_blocks[0], stride=1)
-        self.layer2 = self._make_layer(block, 128//divider, num_blocks[1], stride=2)
-        self.layer3 = self._make_layer(block, 256//divider, num_blocks[2], stride=2)
-        self.layer4 = self._make_layer(block, 512//divider, num_blocks[3], stride=2)
-        self.dense = nn.Linear(512//divider * block.expansion, num_classes)
+        self.layer1 = self._make_layer(block, layer_channels[0], num_blocks[0], stride=1)
+        self.layer2 = self._make_layer(block, layer_channels[1], num_blocks[1], stride=2)
+        self.layer3 = self._make_layer(block, layer_channels[2], num_blocks[2], stride=2)
+        self.layer4 = self._make_layer(block, layer_channels[3], num_blocks[3], stride=2)
+        self.dense = nn.Linear(layer_channels[3] * block.expansion, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -107,7 +113,8 @@ class Model(nn.Module):
 
 def ResNet26(num_classes=1000, args=None):
     if args.small_version:
-        num_blocks = [1, 2, 2, 1] if args.all_attention else [1]*4
+        #Decided to use same architecture for both all conv and all attention for better comparison
+        num_blocks = [1]*4 #[1, 2, 2, 1] if args.all_attention else [1]*4
     else:
         num_blocks = [1, 2, 4, 1]
 

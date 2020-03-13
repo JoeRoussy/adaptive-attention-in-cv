@@ -41,7 +41,7 @@ def get_args():
     parser.add_argument('--batch-size', type=int, default=25)
     parser.add_argument('--num-workers', type=int, default=1)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=1e-1)
+    parser.add_argument('--lr', type=float, default=1.6)
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--weight-decay', type=float, default=1e-4)
     parser.add_argument('--print-interval', type=int, default=100)
