@@ -12,6 +12,16 @@ from model import ResNet50, ResNet38, ResNet26
 from preprocess import load_data
 
 
+'''
+To do:
+1. Use learning rate decay on optimizer (they did this in paper)
+3. Run main function with several different hyper parameters
+4. Need to save state of optimizer if reloading with momentum or Adam
+
+
+Early stopping
+'''
+
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
     lr = args.lr * (0.1 ** (epoch // 30))
@@ -43,12 +53,9 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger):
         if step % args.print_interval == 0:
             # print("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc), end='')
             logger.info("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc))
-            for param_group in optimizer.param_groups:
-                # print(",  Current learning rate is: {}".format(param_group['lr']))
-                logger.info("Current learning rate is: {}".format(param_group['lr']))
 
 
-def eval(model, test_loader, args):
+def eval(model, test_loader, args, is_valid=True):
     print('evaluation ...')
     model.eval()
     correct = 0
@@ -61,7 +68,8 @@ def eval(model, test_loader, args):
             correct += prediction.eq(target.data).sum()
 
     acc = 100. * float(correct) / len(test_loader.dataset)
-    print('Test acc: {0:.2f}'.format(acc))
+    data_set = 'Validation' if is_valid else "Test"
+    print(data_set + ' acc: {0:.2f}'.format(acc))
     return acc
 
 
@@ -76,7 +84,8 @@ def get_model_parameters(model):
 
 
 def main(args, logger):
-    train_loader, test_loader = load_data(args)
+    train_loader, valid_loader, test_loader = load_data(args)
+    num_classes = None
     if args.dataset == 'CIFAR10':
         num_classes = 10
     elif args.dataset == 'CIFAR100':
@@ -84,32 +93,57 @@ def main(args, logger):
     elif args.dataset == 'TinyImageNet':
         num_classes = 100
 
-    print('img_size: {}, num_classes: {}, stem: {}'.format(args.img_size, num_classes, args.stem))
+    print('img_size: {}, num_classes: {}'.format(args.img_size, num_classes))
+    model = None
+    print('ALL ATTENTION: ',args.all_attention)
+    print('USE ADAM: ',args.use_adam)
     if args.model_name == 'ResNet26':
         print('Model Name: {0}'.format(args.model_name))
-        model = ResNet26(num_classes=num_classes, stem=args.stem)
+        model = ResNet26(num_classes=num_classes, args=args)
     elif args.model_name == 'ResNet38':
         print('Model Name: {0}'.format(args.model_name))
-        model = ResNet38(num_classes=num_classes, stem=args.stem)
+        model = ResNet38(num_classes=num_classes, all_attention=args.all_attention)
     elif args.model_name == 'ResNet50':
         print('Model Name: {0}'.format(args.model_name))
-        model = ResNet50(num_classes=num_classes, stem=args.stem)
+        model = ResNet50(num_classes=num_classes, all_attention=args.all_attention)
 
-    if args.pretrained_model:
-        filename = 'best_model_' + str(args.dataset) + '_' + str(args.model_name) + '_' + str(args.stem) + '_ckpt.tar'
+    if args.use_adam:
+        optimizer = optim.Adam(model.parameters(), lr=args.adam_lr)  # Try altering initial settings of Adam later.
+    else:
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
+                              weight_decay=args.weight_decay, nesterov=True)
+
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=0)
+
+    start_epoch = 1
+    best_acc = 0.0
+    best_epoch = 1
+
+    if args.pretrained_model or args.test:
+        filename = 'model_' + str(args.dataset) + '_' + str(args.model_name)  + '_ckpt.tar'
         print('filename :: ', filename)
-        file_path = os.path.join('./checkpoint', filename)
-        checkpoint = torch.load(file_path)
+
+        checkpoint = torch.load(filename)
 
         model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        scheduler.load_state_dict(checkpoint['scheduler'])
+
         start_epoch = checkpoint['epoch']
         best_acc = checkpoint['best_acc']
+        best_epoch = start_epoch
         model_parameters = checkpoint['parameters']
         print('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
         logger.info('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
-    else:
-        start_epoch = 1
-        best_acc = 0.0
+
+        if args.test:
+            #Compute test accuracy
+            if args.cuda:
+                model = model.cuda()
+
+            test_acc = eval(model, test_loader, args, is_valid=False)
+            print('TEST ACCURACY: ',test_acc)
+            return
 
     if args.cuda:
         if torch.cuda.device_count() > 1:
@@ -119,52 +153,59 @@ def main(args, logger):
     print("Number of model parameters: ", get_model_parameters(model))
     logger.info("Number of model parameters: {0}".format(get_model_parameters(model)))
 
+    filename = 'model_' + str(args.dataset) + '_' + str(args.model_name) + '_ckpt.tar'
+    print('will save model as filename :: ', filename)
+
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+
 
     for epoch in range(start_epoch, args.epochs + 1):
         train(model, train_loader, optimizer, criterion, epoch, args, logger)
-        eval_acc = eval(model, test_loader, args)
+
+        #warm up for 10 steps
+        if epoch < 10:
+            optimizer.lr = args.lr * (epoch+1) / 10
+        else:
+            scheduler.step()
+
+        print('Updated lr: ', optimizer.lr)
+        eval_acc = eval(model, valid_loader, args, is_valid=True)
 
         is_best = eval_acc > best_acc
         best_acc = max(eval_acc, best_acc)
+        if is_best:
+            best_epoch = epoch
+        elif epoch - best_epoch > 10:
+            print('EARLY STOPPING')
+            break
 
         if not os.path.isdir('checkpoint'):
             os.mkdir('checkpoint')
-        filename = 'model_' + str(args.dataset) + '_' + str(args.model_name) + '_' + str(args.stem) + '_ckpt.tar'
-        print('filename :: ', filename)
 
         parameters = get_model_parameters(model)
 
-        if torch.cuda.device_count() > 1:
-            save_checkpoint({
-                'epoch': epoch,
-                'arch': args.model_name,
-                'state_dict': model.module.state_dict(),
-                'best_acc': best_acc,
-                'optimizer': optimizer.state_dict(),
-                'parameters': parameters,
-            }, is_best, filename)
-        else:
-            save_checkpoint({
+        if is_best:
+            print('Saving best model')
+            state = {
                 'epoch': epoch,
                 'arch': args.model_name,
                 'state_dict': model.state_dict(),
                 'best_acc': best_acc,
                 'optimizer': optimizer.state_dict(),
+                'scheduler': scheduler.state_dict(),
                 'parameters': parameters,
-            }, is_best, filename)
+                }
+            torch.save(state,filename)
 
 
-def save_checkpoint(state, is_best, filename):
-    file_path = os.path.join('./checkpoint', filename)
-    torch.save(state, file_path)
-    best_file_path = os.path.join('./checkpoint', 'best_' + filename)
-    if is_best:
-        print('best Model Saving ...')
-        shutil.copyfile(file_path, best_file_path)
+
+
 
 
 if __name__ == '__main__':
     args, logger = get_args()
+    main(args, logger)
+
+    #Run on test set
+    args.test = True
     main(args, logger)
