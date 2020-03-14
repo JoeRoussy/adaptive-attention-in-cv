@@ -92,7 +92,7 @@ def load_data(args):
             num_workers=args.num_workers
         )
 
-    elif args.dataset == 'IMAGENET':
-        pass
+    elif args.dataset == 'TinyImageNet':
+        print('Loading TinyImageNet...')
 
     return train_loader, test_loader
