@@ -107,6 +107,14 @@ def main(args, logger):
         print('Model Name: {0}'.format(args.model_name))
         model = ResNet50(num_classes=num_classes, all_attention=args.all_attention)
 
+    if args.use_adam:
+        optimizer = optim.Adam(model.parameters(), lr=args.adam_lr)  # Try altering initial settings of Adam later.
+    else:
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
+                              weight_decay=args.weight_decay, nesterov=True)
+
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=0)
+
     start_epoch = 1
     best_acc = 0.0
     best_epoch = 1
@@ -118,6 +126,9 @@ def main(args, logger):
         checkpoint = torch.load(filename)
 
         model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        scheduler.load_state_dict(checkpoint['scheduler'])
+
         start_epoch = checkpoint['epoch']
         best_acc = checkpoint['best_acc']
         best_epoch = start_epoch
@@ -128,14 +139,11 @@ def main(args, logger):
         if args.test:
             #Compute test accuracy
             if args.cuda:
-                if torch.cuda.device_count() > 1:
-                    model = nn.DataParallel(model)
                 model = model.cuda()
 
             test_acc = eval(model, test_loader, args, is_valid=False)
             print('TEST ACCURACY: ',test_acc)
             return
-
 
     if args.cuda:
         if torch.cuda.device_count() > 1:
@@ -150,19 +158,16 @@ def main(args, logger):
 
     criterion = nn.CrossEntropyLoss()
 
-    optimizer = None
-    if args.use_adam:
-        optimizer = optim.Adam(model.parameters(), lr=args.adam_lr)  #Try altering initial settings of Adam later.
-    else:
-        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
-                              weight_decay=args.weight_decay, nesterov=True)
-
-    # TODO: Add linear warmup for lr as well as save the scheduler and optimizer for restarts.
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=0)
 
     for epoch in range(start_epoch, args.epochs + 1):
         train(model, train_loader, optimizer, criterion, epoch, args, logger)
-        scheduler.step()
+
+        #warm up for 10 steps
+        if epoch < 10:
+            optimizer.lr = args.lr * (epoch+1) / 10
+        else:
+            scheduler.step()
+
         print('Updated lr: ', optimizer.lr)
         eval_acc = eval(model, valid_loader, args, is_valid=True)
 
@@ -179,30 +184,21 @@ def main(args, logger):
 
         parameters = get_model_parameters(model)
 
-        if torch.cuda.device_count() > 1:
-            save_checkpoint({
-                'epoch': epoch,
-                'arch': args.model_name,
-                'state_dict': model.module.state_dict(),
-                'best_acc': best_acc,
-                'optimizer': optimizer.state_dict(),
-                'parameters': parameters,
-            }, is_best, filename)
-        else:
-            save_checkpoint({
+        if is_best:
+            print('Saving best model')
+            state = {
                 'epoch': epoch,
                 'arch': args.model_name,
                 'state_dict': model.state_dict(),
                 'best_acc': best_acc,
                 'optimizer': optimizer.state_dict(),
+                'scheduler': scheduler.state_dict(),
                 'parameters': parameters,
-            }, is_best, filename)
+                }
+            torch.save(state,filename)
 
 
-def save_checkpoint(state, is_best, filename):
-    if is_best:
-        print('Saving best model')
-        torch.save(state, filename)
+
 
 
 
