@@ -95,7 +95,7 @@ class Model(nn.Module):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
-            layers.append(block(self.in_places, planes, stride, self.args)) #in_places is #input_channels
+            layers.append(block(self.in_places, planes, stride, args=self.args)) #in_places is #input_channels
             self.in_places = planes * block.expansion
         return nn.Sequential(*layers)
 

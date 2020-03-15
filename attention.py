@@ -29,32 +29,32 @@ class AdaptiveMask(nn.Module):
         self._max_size = max_size
         self._ramp_size = ramp_size
         self.current_val = nn.Parameter(torch.zeros(*shape) + init_val)
-        self.mask_template = torch.linspace(1 - max_size, 0, steps=max_size)
+        self.mask_template = torch.linspace(1 - int(max_size), 0, steps=int(max_size))
 
-    def forward(self, x):
+    def forward(self, x, mask_len):
 
         one_d_mask = self.mask_template + self.current_val * self._max_size
         one_d_mask = one_d_mask / self._ramp_size + 1
         one_d_mask = one_d_mask.clamp(0, 1)
         # TODO Debug: Check that indexing right dim, this should be relative to x size
         #              if kernel is 3x3 then would expect x.shape[-1] to be 3
-        one_d_mask = one_d_mask[-(x.shape[-1]//2):]
-
+        one_d_mask = one_d_mask[:,-mask_len:]
+        kernel_size = 2*mask_len+1
         # Now masking 'out' (how do we count distance? One way is to start at the center pixel of the kernel and
         # work outwards one square around it at a time filling in the mask.
         # For ex: the adjacent pixels to center pixel have same masking weight. Now pixels outside of those that are
         # adjacent have same weight and so on.
-        mask = torch.ones(x.shape[-1], x.shape[-1])
-        left, right = 0, x.shape[-1] - 1
+        mask = torch.ones(kernel_size, kernel_size)
+        left, right = 0, kernel_size - 1
 
-        for i in range(len(one_d_mask)):
+        for i in range(one_d_mask.shape[1]):
             bottom, top = left, right
-            indices = [[left, j] for j in range(bottom, top + 1)]  # left edge indices
+            indices = [[j, left] for j in range(bottom, top + 1)]  # left edge indices
             indices += [[bottom, j] for j in range(left + 1, right + 1)]  # bottom edge minus overlap with left
             indices += [[top, j] for j in range(left + 1, right + 1)]  # top minus overlap with left
-            indices += [[right, j] for j in range(bottom + 1, top)]  # right minus overlap with bottom and top
+            indices += [[j, right] for j in range(bottom + 1, top)]  # right minus overlap with bottom and top
             rows, cols = zip(*indices)
-            mask[rows, cols] = one_d_mask[i] # TODO: Check how should be indexing this
+            mask[rows, cols] = one_d_mask[0,i] # TODO: Check how should be indexing this when multiple groups
 
             left += 1
             right -= 1
@@ -63,8 +63,14 @@ class AdaptiveMask(nn.Module):
         #    # the input could have been trimmed beforehand to save computation
         #    mask = mask[:, :, -x.size(-1):]
 
-        x = x * mask  #TODO: check dimensions of mask to make sure this is broadcast along
-                      #     proper dimension
+        #TODO: make sure that when I flatten mask, that it is reshaped in exactly the
+        #     same way that x was when it has it's final two dimensions flattened.
+        #     THIS IS WHERE THINGS COULD GO WRONG IF X IS FLATTENED DIFFERENTLY THAN
+        #      mask WAS.
+        mask = mask.view(1,1,1,1,-1)
+        x = x * mask
+        x = x / (x.sum(-1, keepdim=True) + 1e-8)
+
         return x
 
     def get_current_max_size(self, include_ramp=True):
@@ -109,15 +115,17 @@ class AttentionConv(nn.Module):
 
         assert self.out_channels % self.groups == 0, "out_channels should be divided by groups. (example: out_channels: 40, groups: 4)"
 
+        max_mask_size = image_size / 2
+        self.adaptive_mask = AdaptiveMask(max_mask_size, R, init_val=z_init,
+                                          shape=(groups, 1))
+
         # Note the different usage of kernel_size for rel_w and rel_h. They are 2 one dimensional arrays
         # Reason they divide by two is that in the paper they just concat rel_h and rel_w to be the positional
         # embedding vector
-        self.rel_h = nn.Parameter(torch.randn(out_channels // 2, 1, 1, kernel_size, 1), requires_grad=True)
-        self.rel_w = nn.Parameter(torch.randn(out_channels // 2, 1, 1, 1, kernel_size), requires_grad=True)
+        self.rel_h = nn.Parameter(torch.randn(out_channels // 2, 1, 1, self.kernel_size, 1), requires_grad=True)
+        self.rel_w = nn.Parameter(torch.randn(out_channels // 2, 1, 1, 1, self.kernel_size), requires_grad=True)
 
-        max_mask_size = image_size/2
-        self.adaptive_mask = AdaptiveMask(max_mask_size, R, init_val=z_init,
-                                         shape=(groups,1))
+
 
         self.key_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=bias)
         self.query_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=bias)
@@ -147,13 +155,10 @@ class AttentionConv(nn.Module):
         '''
 
         batch, channels, height, width = x.size()
-
+        max_size = None
         if self.adaptive_span:
-            kernel_size = math.ceil(
-                2 * (self.adaptive_mask.get_current_max_size()+1) ) # compute smallest kernel_size we can compute based on mask
-            if kernel_size % 2 == 0:
-                kernel_size += 1
-
+            max_size = self.adaptive_mask.get_current_max_size()
+            kernel_size = int(2 * max_size + 1) # compute smallest kernel_size we can compute based on mask
             padding = int((kernel_size - 1) / 2)
 
         else:
@@ -204,10 +209,13 @@ class AttentionConv(nn.Module):
         #I think way to do this is is multiply (broadcast over last dimension) then sum dim=2 (acts as dot product)
         #TO DO: Check that this still works with groups > 1 (I think may need to do a flattening after in this case
         out = (q_out*k_out).sum(dim=2)
-        out2 = F.softmax(out, dim=-1)
-        out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).squeeze(dim=1) #Check if can condense this in one einstein
 
-        out3 = self.adaptive_mask(out3)
+        out2 = F.softmax(out, dim=-1)
+        if self.adaptive_span:
+            #Note: Applying after softmax and then renormalize after mask
+            out2 = self.adaptive_mask(out2, int(max_size))
+
+        out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).squeeze(dim=1) #Check if can condense this in one einstein
 
         return out3
 

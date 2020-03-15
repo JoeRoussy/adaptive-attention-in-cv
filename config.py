@@ -32,7 +32,7 @@ def get_args():
     #ATTENTION VARS
     parser.add_argument('--all_attention', type=bool, default=False)
     parser.add_argument('--R', type=float, default=3.0, help='Variable R in masking function (controls decay of mask to 0)')
-    parser.add_argument('--z_init', type=float, default=4.0, help='mask variable which controls distance of no mask')
+    parser.add_argument('--z_init', type=float, default=0.1, help='mask variable which controls distance of no mask')
     parser.add_argument('--adaptive_span', type=bool, default=False)
 
     parser.add_argument('--use_adam', type=bool, default=False, help='Whether or not to use Adam optimizer')
@@ -62,7 +62,8 @@ def get_args():
 
     args = parser.parse_args()
 
-    logger = get_logger('train')
-    logger.info(vars(args))
+    # TODO: Remove these comments
+    logger = None #get_logger('train')
+    #logger.info(vars(args))
 
     return args, logger
