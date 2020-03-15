@@ -29,11 +29,16 @@ def get_logger(filename):
 def get_args():
     parser = argparse.ArgumentParser('parameters')
 
+    #ATTENTION VARS
+    parser.add_argument('--all_attention', type=bool, default=False)
+    parser.add_argument('--R', type=float, default=3.0, help='Variable R in masking function (controls decay of mask to 0)')
+    parser.add_argument('--z_init', type=float, default=4.0, help='mask variable which controls distance of no mask')
+    parser.add_argument('--adaptive_span', type=bool, default=False)
+
     parser.add_argument('--use_adam', type=bool, default=False, help='Whether or not to use Adam optimizer')
     parser.add_argument('--adam_lr', type=float, default=0.001)
     parser.add_argument('--attention_kernel', type=int, default=7)
     parser.add_argument('--test', type=bool, default=False, help='Whether or not on test set')
-    parser.add_argument('--all_attention', type=bool, default=False)
     parser.add_argument('--small_version', type=bool, default=True)
     parser.add_argument('--dataset', type=str, default='CIFAR10', help='CIFAR10, CIFAR100, MNIST')
     parser.add_argument('--model-name', type=str, default='ResNet26', help='ResNet26, ResNet38, ResNet50')

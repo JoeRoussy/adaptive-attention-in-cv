@@ -8,16 +8,17 @@ from attention import AttentionConv
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_channels, out_channels, stride=1, groups=1, base_width=64,
-                 all_attention=True, attention_kernel=7):
+    def __init__(self, in_channels, out_channels, stride=1, groups=1, base_width=64, args=None):
 
         super(Bottleneck, self).__init__()
         self.stride = stride
         width = int(out_channels * (base_width / 64.)) * groups
 
-        additional_args = {'groups':groups} if all_attention else {'bias': False}
-        layer = AttentionConv if all_attention else nn.Conv2d
-        kernel_size = attention_kernel if all_attention else 3
+        additional_args = {'groups':groups, 'R':args.R, 'z_init':args.z_init, 'adaptive_span':args.adaptive_span} \
+                            if args.all_attention else {'bias': False}
+
+        layer = AttentionConv if args.all_attention else nn.Conv2d
+        kernel_size = args.attention_kernel if args.all_attention else 3
         padding = 3 if kernel_size==7 else 1  #NEED TO CHANGE THIS FOR WHEN ADAPTIVE
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, width, kernel_size=1, bias=False),
@@ -66,6 +67,7 @@ class Model(nn.Module):
         else:
             layer_channels = [64//divider, 128//divider, 256//divider, 512//divider]
 
+        self.args = args
         self.in_places = 64//divider
         self.all_attention = args.all_attention
         self.attention_kernel = args.attention_kernel
@@ -93,8 +95,7 @@ class Model(nn.Module):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
-            layers.append(block(self.in_places, planes, stride, all_attention=self.all_attention,
-                                attention_kernel=self.attention_kernel)) #in_places is #input_channels
+            layers.append(block(self.in_places, planes, stride, self.args)) #in_places is #input_channels
             self.in_places = planes * block.expansion
         return nn.Sequential(*layers)
 
