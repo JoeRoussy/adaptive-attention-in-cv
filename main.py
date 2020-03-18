@@ -6,7 +6,7 @@ import torch.optim as optim
 import os
 #from tqdm import tqdm
 #import shutil
-
+import time
 from config import get_args, get_logger
 from model import ResNet50, ResNet38, ResNet26
 from preprocess import load_data
@@ -172,8 +172,9 @@ def main(args, logger):
             scheduler.step()
 
         print('Updated lr: ', [x['lr'] for x in optimizer.param_groups])
-
+        start_time = time.time()
         train(model, train_loader, optimizer, criterion, epoch, args, logger)
+        print('Epoch took: ', time.time()-start_time)
 
         eval_acc = eval(model, valid_loader, args, is_valid=True)
 
