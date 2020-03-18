@@ -51,7 +51,7 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger):
         train_acc += acc
         step += 1
         if step % args.print_interval == 0:
-            print("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc), end='')
+            print("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc))
             #logger.info("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc))
 
 
@@ -198,7 +198,6 @@ def main(args, logger):
                 'parameters': parameters,
                 }
             torch.save(state,filename)
-
 
 
 
