@@ -35,7 +35,7 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger):
     train_acc = 0.0
     step = 0
     for data, target in train_loader:
-        adjust_learning_rate(optimizer, epoch, args)
+        #adjust_learning_rate(optimizer, epoch, args)
         if args.cuda:
             data, target = data.cuda(), target.cuda()
 
