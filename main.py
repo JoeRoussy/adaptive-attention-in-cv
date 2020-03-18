@@ -4,8 +4,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 import os
-from tqdm import tqdm
-import shutil
+#from tqdm import tqdm
+#import shutil
 
 from config import get_args, get_logger
 from model import ResNet50, ResNet38, ResNet26
@@ -51,8 +51,8 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger):
         train_acc += acc
         step += 1
         if step % args.print_interval == 0:
-            # print("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc), end='')
-            logger.info("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc))
+            print("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc), end='')
+            #logger.info("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc))
 
 
 def eval(model, test_loader, args, is_valid=True):
@@ -134,7 +134,7 @@ def main(args, logger):
         best_epoch = start_epoch
         model_parameters = checkpoint['parameters']
         print('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
-        logger.info('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
+        #logger.info('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
 
         if args.test:
             #Compute test accuracy
@@ -151,7 +151,7 @@ def main(args, logger):
         model = model.cuda()
 
     print("Number of model parameters: ", get_model_parameters(model))
-    logger.info("Number of model parameters: {0}".format(get_model_parameters(model)))
+    #logger.info("Number of model parameters: {0}".format(get_model_parameters(model)))
 
     filename = 'model_' + str(args.dataset) + '_' + str(args.model_name) + '_ckpt.tar'
     print('will save model as filename :: ', filename)
