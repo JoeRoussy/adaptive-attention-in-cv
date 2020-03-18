@@ -162,13 +162,14 @@ def main(args, logger):
 
 
     for epoch in range(start_epoch, args.epochs + 1):
-        train(model, train_loader, optimizer, criterion, epoch, args, logger)
 
-        #warm up for 10 steps
+        # warm up for 10 steps
         if epoch < args.warmup_epochs:
-            optimizer.lr = args.lr * (epoch+1) / args.warmup_epochs
+            optimizer.lr = args.lr * (epoch + 1) / args.warmup_epochs
         else:
             scheduler.step()
+
+        train(model, train_loader, optimizer, criterion, epoch, args, logger)
 
         print('Updated lr: ', optimizer.lr)
         eval_acc = eval(model, valid_loader, args, is_valid=True)
