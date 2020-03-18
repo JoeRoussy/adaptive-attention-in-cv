@@ -113,9 +113,9 @@ class AttentionConv(nn.Module):
         self.padding = padding
         self.groups = groups
 
-        assert self.out_channels % self.groups == 0, "out_channels should be divided by groups. (example: out_channels: 40, groups: 4)"
+        assert self.out_channels % self.groups == 0, "out_channels should be divisible by groups. (example: out_channels: 40, groups: 4)"
 
-        max_mask_size = image_size / 2
+        max_mask_size = image_size / 2 # TODO(Joe): Our images are all even sizes now so this works but we should force this to be an int, i.e. int(image_size / 2) or image_size // 2
         self.adaptive_mask = AdaptiveMask(max_mask_size, R, init_val=z_init,
                                           shape=(groups, 1))
 
