@@ -206,6 +206,7 @@ def main(args, logger):
 
 if __name__ == '__main__':
     args, logger = get_args()
+    print('ARGS: ', args)
     main(args, logger)
 
     #Run on test set
