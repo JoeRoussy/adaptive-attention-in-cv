@@ -113,7 +113,9 @@ def main(args, logger):
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
                               weight_decay=args.weight_decay, nesterov=True)
 
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=0)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+                                                           T_max=args.T_max,
+                                                           eta_min=args.eta_min)
 
     start_epoch = 1
     best_acc = 0.0
@@ -163,8 +165,8 @@ def main(args, logger):
         train(model, train_loader, optimizer, criterion, epoch, args, logger)
 
         #warm up for 10 steps
-        if epoch < 10:
-            optimizer.lr = args.lr * (epoch+1) / 10
+        if epoch < args.warmup_epochs:
+            optimizer.lr = args.lr * (epoch+1) / args.warmup_epochs
         else:
             scheduler.step()
 
