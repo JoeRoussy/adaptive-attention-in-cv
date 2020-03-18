@@ -40,7 +40,7 @@ def get_args():
     parser.add_argument('--test', type=bool, default=False, help='Whether or not on test set')
     parser.add_argument('--small_version', type=bool, default=True)
     parser.add_argument('--model-name', type=str, default='ResNet26', help='ResNet26, ResNet38, ResNet50')
-    parser.add_argument('--img-size', type=int, default=32)
+    parser.add_argument('--img_size', type=int, default=32)
     parser.add_argument('--batch-size', type=int, default=25)
     parser.add_argument('--num-workers', type=int, default=1)
     parser.add_argument('--epochs', type=int, default=100)
