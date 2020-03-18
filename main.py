@@ -165,13 +165,16 @@ def main(args, logger):
 
         # warm up for 10 steps
         if epoch < args.warmup_epochs:
-            optimizer.lr = args.lr * (epoch + 1) / args.warmup_epochs
+            for param_group in optimizer.param_groups:
+                param_group['lr'] = args.lr * (epoch + 1) / args.warmup_epochs
+
         else:
             scheduler.step()
 
+        print('Updated lr: ', [x['lr'] for x in optimizer.param_groups])
+
         train(model, train_loader, optimizer, criterion, epoch, args, logger)
 
-        print('Updated lr: ', optimizer.lr)
         eval_acc = eval(model, valid_loader, args, is_valid=True)
 
         is_best = eval_acc > best_acc
