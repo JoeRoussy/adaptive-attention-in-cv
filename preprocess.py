@@ -2,7 +2,7 @@ import torch
 
 from torchvision import datasets, transforms
 
-# NOTE: Mean and std use for normalization are known stats from the distribution of each dataset
+# NOTE: Mean and std used for normalization are known stats from the distribution of each dataset
 
 def load_data(args):
     print('Load Dataset :: {}'.format(args.dataset))
@@ -108,7 +108,7 @@ def load_data(args):
 
     elif args.dataset == 'TinyImageNet':
         # We use the normalization stats of the full ImageNet dataset as an estimate for the stats of the
-        # TinyImageNet database
+        # TinyImageNet dataset
         transform_train = transforms.Compose([
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
