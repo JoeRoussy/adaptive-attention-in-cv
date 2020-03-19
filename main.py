@@ -126,15 +126,12 @@ def main(args, logger):
         filename = 'model_' + str(args.dataset) + '_' + str(args.model_name)  + '_ckpt.tar'
         print('filename :: ', filename)
 
-        checkpoint = torch.load(filename)
+        map_location = 'cuda' if args.cuda else None
+        checkpoint = torch.load(filename, map_location=map_location)
 
         model.load_state_dict(checkpoint['state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         scheduler.load_state_dict(checkpoint['scheduler'])
-
-        if args.cuda:
-            device = torch.device("cuda")
-            model.to(device)
 
         start_epoch = checkpoint['epoch']
         best_acc = checkpoint['best_acc']
