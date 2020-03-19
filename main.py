@@ -24,9 +24,10 @@ Early stopping
 
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+    #After 60% of we trim by factor args.decay_factor and at 80% we do this again
+    if epoch == int(0.6*float(args.epochs)) or epoch == int(0.8*float(args.epochs)):
+        for param_group in optimizer.param_groups:
+            param_group['lr'] *= args.decay_factor
 
 
 def train(model, train_loader, optimizer, criterion, epoch, args, logger):
@@ -163,13 +164,16 @@ def main(args, logger):
 
     for epoch in range(start_epoch, args.epochs + 1):
 
-        # warm up for 10 steps
-        if epoch < args.warmup_epochs:
-            for param_group in optimizer.param_groups:
-                param_group['lr'] = args.lr * (epoch + 1) / args.warmup_epochs
+        if args.all_attention:
+            if epoch < args.warmup_epochs:
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = args.lr * (epoch + 1) / args.warmup_epochs
+
+            else:
+                scheduler.step()
 
         else:
-            scheduler.step()
+            adjust_learning_rate(optimizer, epoch, args)
 
         print('Updated lr: ', [x['lr'] for x in optimizer.param_groups])
         start_time = time.time()
