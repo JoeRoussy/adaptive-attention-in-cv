@@ -129,6 +129,10 @@ def main(args, logger):
         checkpoint = torch.load(filename)
 
         model.load_state_dict(checkpoint['state_dict'])
+
+        if args.cuda:
+            model = model.cuda()
+
         optimizer.load_state_dict(checkpoint['optimizer'])
         scheduler.load_state_dict(checkpoint['scheduler'])
 
@@ -141,14 +145,12 @@ def main(args, logger):
 
         if args.test:
             #Compute test accuracy
-            if args.cuda:
-                model = model.cuda()
 
             test_acc = eval(model, test_loader, args, is_valid=False)
             print('TEST ACCURACY: ',test_acc)
             return
 
-    if args.cuda:
+    if args.cuda and not args.pretrained_model:
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
         model = model.cuda()
