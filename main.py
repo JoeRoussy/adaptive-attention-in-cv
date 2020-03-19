@@ -132,6 +132,12 @@ def main(args, logger):
         optimizer.load_state_dict(checkpoint['optimizer'])
         scheduler.load_state_dict(checkpoint['scheduler'])
 
+        if args.cuda:
+            device = torch.device("cuda")
+            model.to(device)
+            optimizer.to(device)
+            scheduler.to(device)
+
         start_epoch = checkpoint['epoch']
         best_acc = checkpoint['best_acc']
         best_epoch = start_epoch
