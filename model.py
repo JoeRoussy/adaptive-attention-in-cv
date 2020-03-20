@@ -8,10 +8,11 @@ from attention import AttentionConv
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_channels, out_channels, stride=1, groups=1, base_width=64, args=None):
+    def __init__(self, in_channels, out_channels, stride=1, base_width=64, args=None):
 
         super(Bottleneck, self).__init__()
         self.stride = stride
+        groups = args.groups # Number of attention heads
         width = int(out_channels * (base_width / 64.)) * groups
 
         additional_args = {'groups':groups, 'R':args.R, 'z_init':args.z_init, 'adaptive_span':args.adaptive_span} \
