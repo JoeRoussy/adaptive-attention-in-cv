@@ -41,7 +41,7 @@ def get_args():
     parser.add_argument('--adam_lr', type=float, default=0.001)
     parser.add_argument('--attention_kernel', type=int, default=3)
     parser.add_argument('--test', type=bool, default=False, help='Whether or not on test set')
-    parser.add_argument('--small_version', type=bool, default=True)
+    parser.add_argument('--small_version', type=bool, default=False)
     parser.add_argument('--dataset', type=str, default='CIFAR10', help='CIFAR10, CIFAR100, MNIST')
     parser.add_argument('--model-name', type=str, default='ResNet26', help='ResNet26, ResNet38, ResNet50')
     parser.add_argument('--img-size', type=int, default=32)
@@ -53,7 +53,7 @@ def get_args():
     parser.add_argument('--eta_min', type=float, default=0.)
     parser.add_argument('--warmup_epochs', type=int, default=10)
 
-    parser.add_argument('--lr', type=float, default=1.6)
+    parser.add_argument('--lr', type=float, default=0.1)
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--weight-decay', type=float, default=1e-4)
     parser.add_argument('--print-interval', type=int, default=100)
