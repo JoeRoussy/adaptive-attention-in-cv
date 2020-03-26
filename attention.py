@@ -205,6 +205,8 @@ class AttentionConv(nn.Module):
         k_out_h, k_out_w = k_out.split(self.out_channels // 2, dim=1)
         k_out = torch.cat((k_out_h + rel_h, k_out_w + rel_w), dim=1)
 
+
+
         #for now suppose groups is 1, RETHINK THIS IF NOT
         #this operation just flattens the kernels in the last two dimensions (does this properly from example I did)
         k_out = k_out.contiguous().view(batch, self.groups, self.out_channels // self.groups, height, width, -1)
@@ -213,13 +215,17 @@ class AttentionConv(nn.Module):
         # TODO : How will this expansion work out if there are multiple groups ?
         q_out = q_out.view(batch, self.groups, self.out_channels // self.groups, height, width, 1)
 
-        #DONT UNDERSTAND WHY HE MULTIPLIED LIKE THIS, HIS IS COMMENTED OUT
-        #out = q_out * k_out
-        #out = F.softmax(out, dim=-1)
-        #out = torch.einsum('bnchwk,bnchwk -> bnchw', out, v_out).view(batch, -1, height, width)
+        # ORINGINAL IMPLEMENTATION
+        out = q_out * k_out
+        out = F.softmax(out, dim=-1)
+        out = torch.einsum('bnchwk,bnchwk -> bnchw', out, v_out).view(batch, -1, height, width)
+        # END ORIGINAL IMPLEMENTATOIN
 
+        '''
+        OUR IMPLEMENTATION (DOES NOT WORK WITH groups > 1)
+        # Why does orginal implementation work with many groups and ours does not?
         #I think way to do this is is multiply (broadcast over last dimension) then sum dim=2 (acts as dot product)
-        #TO DO: Check that this still works with groups > 1 (I think may need to do a flattening after in this case
+        #TO DO: Check that this still works with groups > 1 (I think may need to do a flattening after in this case)
         out = (q_out*k_out).sum(dim=2)
 
         out2 = F.softmax(out, dim=-1)
@@ -228,8 +234,10 @@ class AttentionConv(nn.Module):
             out2 = self.adaptive_mask(out2, int(max_size))
 
         out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).squeeze(dim=1) #Check if can condense this in one einstein
+        '''
 
-        return out3
+        #return out3
+        return out
 
 
     def reset_parameters(self):
