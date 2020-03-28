@@ -167,7 +167,7 @@ def main(args, logger):
 
     for epoch in range(start_epoch, args.epochs + 1):
 
-        if args.all_attention:
+        if args.all_attention or args.attention_conv:
             if epoch < args.warmup_epochs:
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = args.lr * (epoch + 1) / args.warmup_epochs
