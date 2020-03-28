@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.nn.init as init
 import numpy
 import math
+import time #TODO... Remove, only for testing purposes
 
 '''
 This class is taken from https://github.com/facebookresearch/adaptive-span/blob/master/adaptive_span.py
@@ -136,8 +137,6 @@ class AttentionConv(nn.Module):
         self.rel_h = nn.Parameter(torch.randn(out_channels // 2, 1, 1, self.kernel_size, 1), requires_grad=True)
         self.rel_w = nn.Parameter(torch.randn(out_channels // 2, 1, 1, 1, self.kernel_size), requires_grad=True)
 
-
-
         self.key_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=bias)
         self.query_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=bias)
         self.value_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=bias)
@@ -216,27 +215,57 @@ class AttentionConv(nn.Module):
         q_out = q_out.view(batch, self.groups, self.out_channels // self.groups, height, width, 1)
 
         # ORINGINAL IMPLEMENTATION
+        # This is about 3x slower than our new implementation below for 1 group
+        start_time = time.time()
         out = q_out * k_out
         out = F.softmax(out, dim=-1)
         out = torch.einsum('bnchwk,bnchwk -> bnchw', out, v_out).view(batch, -1, height, width)
+        print('Attention took: ', time.time()-start_time)
         # END ORIGINAL IMPLEMENTATOIN
 
         '''
-        OUR IMPLEMENTATION (DOES NOT WORK WITH groups > 1)
+        #OUR IMPLEMENTATION (DOES NOT WORK WITH groups > 1)
         # Why does orginal implementation work with many groups and ours does not?
         #I think way to do this is is multiply (broadcast over last dimension) then sum dim=2 (acts as dot product)
         #TO DO: Check that this still works with groups > 1 (I think may need to do a flattening after in this case)
-        out = (q_out*k_out).sum(dim=2)
+        start_time = time.time()
+        out = (q_out*k_out).sum(dim=2) # Original
+        #out = (q_out*k_out).sum(dim=2).squeeze(dim=1)
+
+        print('out shape')
+        print(out.shape)
+
+        print('q_out shape')
+        print(q_out.shape)
+        print('k_out shape')
+        print(k_out.shape)
+
+        
 
         out2 = F.softmax(out, dim=-1)
         if self.adaptive_span:
             #Note: Applying after softmax and then renormalize after mask
             out2 = self.adaptive_mask(out2, int(max_size))
 
+        print('out2')
+        print(out2.shape)
+
+        print('out2.unsqueeze(dim=2)')
+        print(out2.unsqueeze(dim=2).shape)
+
         out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).squeeze(dim=1) #Check if can condense this in one einstein
+        print('Attention took: ', time.time()-start_time)
         '''
 
-        #return out3
+        # print('out channels')
+        # print(self.out_channels)
+        # print('out3 shape')
+        # print(out3.shape)
+
+        # return out3
+        
+        print('out shape')
+        print(out.shape)
         return out
 
 

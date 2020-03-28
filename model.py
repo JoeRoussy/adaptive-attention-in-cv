@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from attention import AttentionConv
+from attention_augmented_conv import AugmentedConv
 
 
 class Bottleneck(nn.Module):
@@ -13,14 +14,28 @@ class Bottleneck(nn.Module):
         super(Bottleneck, self).__init__()
         self.stride = stride
         groups = args.groups # Number of attention heads
-        width = int(out_channels * (base_width / 64.)) * groups
+        width = int(out_channels * (base_width / 64.))\
+            if args.attention_conv\
+            else int(out_channels * (base_width / 64.)) * groups
 
         additional_args = {'groups':groups, 'R':args.R, 'z_init':args.z_init, 'adaptive_span':args.adaptive_span} \
                             if args.all_attention else {'bias': False}
 
-        layer = AttentionConv if args.all_attention else nn.Conv2d
         kernel_size = args.attention_kernel if args.all_attention else 3
         padding = 3 if kernel_size==7 else 1  #NEED TO CHANGE THIS FOR WHEN ADAPTIVE
+
+        layer = None
+
+        if args.attention_conv:
+            # Assume dk = 40, dv = 4. TODO: Not sure why we use these settings
+            dk = 40
+            dv = 4
+            layer = AugmentedConv(width, width, kernel_size, dk, dv, groups, shape=width)
+        elif args.all_attention:
+            layer = AttentionConv(width, width, kernel_size=kernel_size, padding=padding, **additional_args)
+        else:
+            layer = nn.Conv2d(width, width, kernel_size=kernel_size, padding=padding, **additional_args)
+
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, width, kernel_size=1, bias=False),
             nn.BatchNorm2d(width),
@@ -28,8 +43,7 @@ class Bottleneck(nn.Module):
         )
 
         self.conv2 = nn.Sequential(
-            layer(width, width, kernel_size=kernel_size, padding=padding, **additional_args), #,*additional_args),
-            # AttentionConv(width, width, kernel_size=7, padding=3, groups=8),
+            layer,
             nn.BatchNorm2d(width),
             nn.ReLU(),
         )

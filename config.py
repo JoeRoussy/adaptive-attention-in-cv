@@ -30,7 +30,8 @@ def get_args():
     parser = argparse.ArgumentParser('parameters')
 
     #ATTENTION VARS
-    parser.add_argument('--all_attention', type=bool, default=False)
+    parser.add_argument('--all_attention', type=bool, default=False, help='Use local self attention instead of convolutions')
+    parser.add_argument('--attention_conv', type=bool, default=False, help='Use attention augmented convolutions')
     parser.add_argument('--R', type=float, default=3.0, help='Variable R in masking function (controls decay of mask to 0)')
     parser.add_argument('--z_init', type=float, default=0.1, help='mask variable which controls distance of no mask')
     parser.add_argument('--adaptive_span', type=bool, default=False)
