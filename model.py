@@ -27,10 +27,7 @@ class Bottleneck(nn.Module):
         layer = None
 
         if args.attention_conv:
-            # Assume dk = 40, dv = 4. TODO: Not sure why we use these settings
-            dk = 40
-            dv = 4
-            layer = AugmentedConv(width, width, kernel_size, dk, dv, groups, shape=width)
+            layer = AugmentedConv(width, width, kernel_size, args.dk, args.dv, groups, shape=width)
         elif args.all_attention:
             layer = AttentionConv(width, width, kernel_size=kernel_size, padding=padding, **additional_args)
         else:
