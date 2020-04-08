@@ -216,14 +216,13 @@ class AttentionConv(nn.Module):
 
         # ORINGINAL IMPLEMENTATION
         # This is about 3x slower than our new implementation below for 1 group
-        start_time = time.time()
-        out = q_out * k_out
-        out = F.softmax(out, dim=-1)
-        out = torch.einsum('bnchwk,bnchwk -> bnchw', out, v_out).view(batch, -1, height, width)
-        print('Attention took: ', time.time()-start_time)
+        #start_time = time.time()
+        #out = q_out * k_out
+        #out = F.softmax(out, dim=-1)
+        #out = torch.einsum('bnchwk,bnchwk -> bnchw', out, v_out).view(batch, -1, height, width)
+        #print('Attention took: ', time.time()-start_time)
         # END ORIGINAL IMPLEMENTATOIN
 
-        '''
         #OUR IMPLEMENTATION (DOES NOT WORK WITH groups > 1)
         # Why does orginal implementation work with many groups and ours does not?
         #I think way to do this is is multiply (broadcast over last dimension) then sum dim=2 (acts as dot product)
@@ -232,41 +231,16 @@ class AttentionConv(nn.Module):
         out = (q_out*k_out).sum(dim=2) # Original
         #out = (q_out*k_out).sum(dim=2).squeeze(dim=1)
 
-        print('out shape')
-        print(out.shape)
-
-        print('q_out shape')
-        print(q_out.shape)
-        print('k_out shape')
-        print(k_out.shape)
-
-        
-
         out2 = F.softmax(out, dim=-1)
         if self.adaptive_span:
             #Note: Applying after softmax and then renormalize after mask
             out2 = self.adaptive_mask(out2, int(max_size))
 
-        print('out2')
-        print(out2.shape)
-
-        print('out2.unsqueeze(dim=2)')
-        print(out2.unsqueeze(dim=2).shape)
-
         out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).squeeze(dim=1) #Check if can condense this in one einstein
+
         print('Attention took: ', time.time()-start_time)
-        '''
 
-        # print('out channels')
-        # print(self.out_channels)
-        # print('out3 shape')
-        # print(out3.shape)
-
-        # return out3
-        
-        print('out shape')
-        print(out.shape)
-        return out
+        return out3
 
 
     def reset_parameters(self):
