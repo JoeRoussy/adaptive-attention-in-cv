@@ -182,6 +182,7 @@ class AttentionConv(nn.Module):
         k_out = self.key_conv(padded_x)
         v_out = self.value_conv(padded_x)
 
+        # this line is dividing k_out into chunks of kernel_size with stride=self.stride
         k_out = k_out.unfold(2, kernel_size, self.stride).unfold(3, kernel_size, self.stride)
         v_out = v_out.unfold(2, kernel_size, self.stride).unfold(3, kernel_size, self.stride)
         #now k_out has shape (bsz, out_channels, height, width,3,3) where kernel =(3,3) (so has keys for each block which makes it easy to apply attention)
@@ -202,12 +203,14 @@ class AttentionConv(nn.Module):
             rel_w = self.rel_w
 
         k_out_h, k_out_w = k_out.split(self.out_channels // 2, dim=1)
+        # TODO : This relative positioning is not clear !
         k_out = torch.cat((k_out_h + rel_h, k_out_w + rel_w), dim=1)
 
 
 
         #for now suppose groups is 1, RETHINK THIS IF NOT
         #this operation just flattens the kernels in the last two dimensions (does this properly from example I did)
+        # This operation also divides the k_out, and v_out among the different heads.
         k_out = k_out.contiguous().view(batch, self.groups, self.out_channels // self.groups, height, width, -1)
         v_out = v_out.contiguous().view(batch, self.groups, self.out_channels // self.groups, height, width, -1)
 
@@ -229,6 +232,8 @@ class AttentionConv(nn.Module):
         #TO DO: Check that this still works with groups > 1 (I think may need to do a flattening after in this case)
         start_time = time.time()
         out = (q_out*k_out).sum(dim=2) # Original
+        # All the channels are being merged into 1
+        # TODO Shakti : The last sum is weird!!
         #out = (q_out*k_out).sum(dim=2).squeeze(dim=1)
 
         out2 = F.softmax(out, dim=-1)

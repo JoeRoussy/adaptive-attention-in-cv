@@ -17,6 +17,8 @@ class Bottleneck(nn.Module):
         groups = args.groups # Number of attention heads
 
         '''
+
+        # TODO : Doubt in width, when base_width != 64?
         width = int(out_channels * (base_width / 64.))\
             if args.attention_conv\
             else int(out_channels * (base_width / 64.)) * groups

@@ -74,6 +74,8 @@ def get_args():
     parser.add_argument('--dist-backend', type=str, default='nccl')
     parser.add_argument('--dist-url', default='tcp://127.0.0.1:3456', type=str)
 
+    parser.add_argument('--xpid', default='example', help='Experiment ID, default = example')
+
     args = parser.parse_args()
 
     # TODO: Remove these comments

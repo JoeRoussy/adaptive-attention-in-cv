@@ -10,7 +10,7 @@ import time
 from config import get_args, get_logger
 from model import ResNet50, ResNet38, ResNet26
 from preprocess import load_data
-
+import file_writer
 
 '''
 TODO:
@@ -126,7 +126,7 @@ def main(args, logger):
     best_epoch = 1
 
     if args.pretrained_model or args.test:
-        filename = 'model_' + str(args.dataset) + '_' + str(args.model_name)  + '_ckpt.tar'
+        filename = args.xpid + '_model_' + str(args.dataset) + '_' + str(args.model_name)  + '_ckpt.tar'
         print('filename :: ', filename)
 
         map_location = 'cuda' if args.cuda else None
@@ -162,7 +162,10 @@ def main(args, logger):
     print("Number of model parameters: ", get_model_parameters(model))
     #logger.info("Number of model parameters: {0}".format(get_model_parameters(model)))
 
-    filename = 'model_' + str(args.dataset) + '_' + str(args.model_name) + '_ckpt.tar'
+    filename = args.xpid + '_model_' + str(args.dataset) + '_' + str(args.model_name) + '_ckpt.tar'
+    plogger = file_writer.FileWriter(
+        xpid=args.xpid, rootdir=os.path.dirname(os.path.abspath(__file__))
+    )
     print('will save model as filename :: ', filename)
 
     criterion = nn.CrossEntropyLoss()
@@ -180,13 +183,15 @@ def main(args, logger):
 
         else:
             adjust_learning_rate(optimizer, epoch, args)
-
-        print('Updated lr: ', [x['lr'] for x in optimizer.param_groups])
+        learning_rate = [x['lr'] for x in optimizer.param_groups]
+        print('Updated lr: ', learning_rate)
         start_time = time.time()
         train(model, train_loader, optimizer, criterion, epoch, args, logger)
         print('Epoch took: ', time.time()-start_time)
 
         eval_acc = eval(model, valid_loader, args, is_valid=True)
+        to_log = dict(accuracy=eval_acc, learning_rate=learning_rate)
+        plogger.log(to_log)
 
         is_best = eval_acc > best_acc
         best_acc = max(eval_acc, best_acc)
@@ -213,6 +218,7 @@ def main(args, logger):
                 'parameters': parameters,
                 }
             torch.save(state,filename)
+    plogger.close()
 
 
 
