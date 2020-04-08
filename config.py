@@ -31,13 +31,17 @@ def get_args():
 
     #ATTENTION VARS
     parser.add_argument('--all_attention', type=bool, default=False, help='Use local self attention instead of convolutions')
-    parser.add_argument('--attention_conv', type=bool, default=False, help='Use attention augmented convolutions')
+    parser.add_argument('--groups', type=int, default=1)
+
+    #Global Attention
     parser.add_argument('--dk', type=int, default=40, help='Dimensions of the query and key vectors. Note that this will be split amoung each attention head')
     parser.add_argument('--dv', type=int, default=4, help='Dimensions of the value vectors. Note that this will be split amoung each attention head')
+    parser.add_argument('--attention_conv', type=bool, default=False, help='Use attention augmented convolutions')
+
+    #Adaptive Attention
     parser.add_argument('--R', type=float, default=3.0, help='Variable R in masking function (controls decay of mask to 0)')
     parser.add_argument('--z_init', type=float, default=0.1, help='mask variable which controls distance of no mask')
     parser.add_argument('--adaptive_span', type=bool, default=False)
-    parser.add_argument('--groups', type=int, default=1)
 
     parser.add_argument('--decay_factor', type=float, default=0.3, help='factor to decay lr by')
     parser.add_argument('--use_adam', type=bool, default=False, help='Whether or not to use Adam optimizer')

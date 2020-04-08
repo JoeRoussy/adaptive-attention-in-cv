@@ -236,9 +236,10 @@ class AttentionConv(nn.Module):
             #Note: Applying after softmax and then renormalize after mask
             out2 = self.adaptive_mask(out2, int(max_size))
 
-        out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).squeeze(dim=1) #Check if can condense this in one einstein
+        #out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).squeeze(dim=1) #Check if can condense this in one einstein
+        out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).view(batch, -1, height, width)
 
-        print('Attention took: ', time.time()-start_time)
+        #print('Attention took: ', time.time()-start_time)
 
         return out3
 

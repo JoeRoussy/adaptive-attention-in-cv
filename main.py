@@ -13,7 +13,7 @@ from preprocess import load_data
 
 
 '''
-To do:
+TODO:
 1. Use learning rate decay on optimizer (they did this in paper)
 3. Run main function with several different hyper parameters
 4. Need to save state of optimizer if reloading with momentum or Adam
@@ -22,6 +22,10 @@ To do:
 Early stopping
 '''
 
+#TODO Make training pipeline nice like in RL where logs go to different dir for each run.
+#TODO Employ early stopping as well as allowing multiple experiments in one run.
+#TODO Add ability for multi gpu
+#TODO Add dynamic attention span (span depends also on current input and layer)
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
     #After 60% of we trim by factor args.decay_factor and at 80% we do this again
@@ -96,8 +100,7 @@ def main(args, logger):
 
     print('img_size: {}, num_classes: {}'.format(args.img_size, num_classes))
     model = None
-    print('ALL ATTENTION: ',args.all_attention)
-    print('USE ADAM: ',args.use_adam)
+    print('ARGS: ', args)
     if args.model_name == 'ResNet26':
         print('Model Name: {0}'.format(args.model_name))
         model = ResNet26(num_classes=num_classes, args=args)

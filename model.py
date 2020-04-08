@@ -6,6 +6,7 @@ from attention import AttentionConv
 from attention_augmented_conv import AugmentedConv
 
 
+#TODO Make width not increase with # groups
 class Bottleneck(nn.Module):
     expansion = 4
 
@@ -14,9 +15,13 @@ class Bottleneck(nn.Module):
         super(Bottleneck, self).__init__()
         self.stride = stride
         groups = args.groups # Number of attention heads
+
+        '''
         width = int(out_channels * (base_width / 64.))\
             if args.attention_conv\
             else int(out_channels * (base_width / 64.)) * groups
+        '''
+        width = out_channels
 
         additional_args = {'groups':groups, 'R':args.R, 'z_init':args.z_init, 'adaptive_span':args.adaptive_span} \
                             if args.all_attention else {'bias': False}
