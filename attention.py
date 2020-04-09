@@ -69,6 +69,8 @@ class AdaptiveMask(nn.Module):
 
         mask = mask.view(1,1,1,1,-1)
         x = x * mask
+
+        # TODO : Jerrod, why not take a softmax here instead?
         x = x / (x.sum(-1, keepdim=True) + 1e-8)
 
         return x
