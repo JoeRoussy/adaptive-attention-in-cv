@@ -44,7 +44,8 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger, device
 
         optimizer.zero_grad()
         output = model(data)
-        loss = criterion(output, target)
+        span_loss = model.get_span_l1(args)
+        loss = criterion(output, target) + args.span_penalty * span_loss
         loss.backward()
         optimizer.step()
 
