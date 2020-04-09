@@ -87,21 +87,19 @@ class Model(nn.Module):
             layer_channels = [64//divider, 128//divider, 256//divider, 512//divider]
 
         self.args = args
-        self.in_places = 64//divider
+        self.in_places = args.img_size
         self.all_attention = args.all_attention
         self.attention_kernel = args.attention_kernel
 
         self.init = nn.Sequential(
-            # CIFAR10
+            nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
+        ) if args.dataset == 'TinyImageNet' else nn.Sequential(
             nn.Conv2d(3, 64 // divider, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(64 // divider),
             nn.ReLU()
-
-            # For ImageNet
-            # nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3, bias=False),
-            # nn.BatchNorm2d(64),
-            # nn.ReLU(),
-            # nn.MaxPool2d(kernel_size=3, stride=2, padding=1),
         )
         self.layers = nn.ModuleList()
         strides = [1] + [2]*3
@@ -134,11 +132,15 @@ class Model(nn.Module):
                 l2.conv2[0].adaptive_mask.clamp_param()
 
     def forward(self, x):
+        # TODO(Joe): See if there is some other modification we can make so we don't need to have different pooling kernels at the end of the model
+        pooling_kernel_size = 2 if self.args.dataset == 'TinyImageNet' else 4
+
         out = self.init(x)
+        
         for layer in self.layers:
             out = layer(out)
 
-        out = F.avg_pool2d(out, 4)
+        out = F.avg_pool2d(out, pooling_kernel_size)
         out = out.view(out.size(0), -1)
         out = self.dense(out)
 

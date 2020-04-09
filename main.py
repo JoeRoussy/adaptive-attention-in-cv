@@ -97,8 +97,8 @@ def main(args, logger):
         num_classes = 10
     elif args.dataset == 'CIFAR100':
         num_classes = 100
-    elif args.dataset == 'IMAGENET':
-        num_classes = 1000
+    elif args.dataset == 'TinyImageNet':
+        num_classes = 200
 
     print('img_size: {}, num_classes: {}'.format(args.img_size, num_classes))
     model = None

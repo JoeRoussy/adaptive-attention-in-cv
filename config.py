@@ -44,18 +44,19 @@ def get_args():
     parser.add_argument('--adaptive_span', type=bool, default=False)
     parser.add_argument('--span_penalty', type=float, default=0.001,
                         help='L1 regularizer coefficient for attention span variables')
+    parser.add_argument('--attention_kernel', type=int, default=3)
 
     # learning rate for adam
     parser.add_argument('--decay_factor', type=float, default=0.3, help='factor to decay lr by')
     parser.add_argument('--use_adam', type=bool, default=False, help='Whether or not to use Adam optimizer')
     parser.add_argument('--adam_lr', type=float, default=0.001)
 
-    parser.add_argument('--attention_kernel', type=int, default=3)
+    
+    parser.add_argument('--dataset', type=str, default='CIFAR10', help='CIFAR10, CIFAR100, MNIST, TinyImageNet')
     parser.add_argument('--test', type=bool, default=False, help='Whether or not on test set')
     parser.add_argument('--small_version', type=bool, default=False)
-    parser.add_argument('--dataset', type=str, default='CIFAR10', help='CIFAR10, CIFAR100, MNIST')
     parser.add_argument('--model-name', type=str, default='ResNet26', help='ResNet26, ResNet38, ResNet50')
-    parser.add_argument('--img-size', type=int, default=32)
+    parser.add_argument('--img_size', type=int, default=32)
     parser.add_argument('--batch-size', type=int, default=25)
     parser.add_argument('--num-workers', type=int, default=1)
     parser.add_argument('--epochs', type=int, default=100)
