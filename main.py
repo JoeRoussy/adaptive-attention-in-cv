@@ -200,7 +200,7 @@ def main(args, logger):
         best_acc = max(eval_acc, best_acc)
         if is_best:
             best_epoch = epoch
-        elif epoch - best_epoch > 10:
+        elif epoch - best_epoch > int(args.epochs * 0.2):
             print('EARLY STOPPING')
             break
 
