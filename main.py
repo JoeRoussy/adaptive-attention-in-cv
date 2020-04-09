@@ -49,6 +49,9 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger, device
         loss.backward()
         optimizer.step()
 
+        if args.adaptive_span:
+            model.clamp_span()
+
         y_pred = output.data.max(1)[1]
 
         acc = float(y_pred.eq(target.data).sum()) / len(data) * 100.

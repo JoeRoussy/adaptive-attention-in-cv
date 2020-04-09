@@ -128,6 +128,11 @@ class Model(nn.Module):
 
         return num_abs_spans
 
+    def clamp_span(self):
+        for l in self.layers:
+            for l2 in l:
+                l2.conv2[0].adaptive_mask.clamp_param()
+
     def forward(self, x):
         out = self.init(x)
         for layer in self.layers:
