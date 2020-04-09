@@ -4,3 +4,6 @@ data/
 datasets/
 log/
 venv/
+.idea/
+example/
+latest

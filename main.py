@@ -34,15 +34,13 @@ def adjust_learning_rate(optimizer, epoch, args):
             param_group['lr'] *= args.decay_factor
 
 
-def train(model, train_loader, optimizer, criterion, epoch, args, logger):
+def train(model, train_loader, optimizer, criterion, epoch, args, logger, device):
     model.train()
 
     train_acc = 0.0
     step = 0
     for data, target in train_loader:
-        #adjust_learning_rate(optimizer, epoch, args)
-        if args.cuda:
-            data, target = data.cuda(), target.cuda()
+        data, target = data.to(device), target.to(device)
 
         optimizer.zero_grad()
         output = model(data)
@@ -60,14 +58,14 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger):
             #logger.info("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc))
 
 
-def eval(model, test_loader, args, is_valid=True):
+def eval(model, test_loader, args, is_valid=True, device=None):
     print('evaluation ...')
     model.eval()
     correct = 0
     with torch.no_grad():
         for data, target in test_loader:
-            if args.cuda:
-                data, target = data.cuda(), target.cuda()
+            data, target = data.to(device), target.to(device)
+
             output = model(data)
             prediction = output.data.max(1)[1]
             correct += prediction.eq(target.data).sum()
@@ -125,6 +123,7 @@ def main(args, logger):
     best_acc = 0.0
     best_epoch = 1
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if args.pretrained_model or args.test:
         filename = args.xpid + '_model_' + str(args.dataset) + '_' + str(args.model_name)  + '_ckpt.tar'
         print('filename :: ', filename)
@@ -134,8 +133,7 @@ def main(args, logger):
 
         model.load_state_dict(checkpoint['state_dict'])
 
-        if args.cuda:
-            model = model.cuda()
+        model = model.to(device)
 
         optimizer.load_state_dict(checkpoint['optimizer'])
         scheduler.load_state_dict(checkpoint['scheduler'])
@@ -154,10 +152,10 @@ def main(args, logger):
             print('TEST ACCURACY: ',test_acc)
             return
 
-    if args.cuda and not args.pretrained_model:
+    if not args.pretrained_model:
         if torch.cuda.device_count() > 1:
             model = nn.DataParallel(model)
-        model = model.cuda()
+        model = model.to(device)
 
     print("Number of model parameters: ", get_model_parameters(model))
     #logger.info("Number of model parameters: {0}".format(get_model_parameters(model)))
@@ -187,10 +185,10 @@ def main(args, logger):
         # learning_rate = [x['lr'] for x in optimizer.param_groups]
         print('Updated lr: ', learning_rate)
         start_time = time.time()
-        train(model, train_loader, optimizer, criterion, epoch, args, logger)
+        train(model, train_loader, optimizer, criterion, epoch, args, logger, device)
         print('Epoch took: ', time.time()-start_time)
 
-        eval_acc = eval(model, valid_loader, args, is_valid=True)
+        eval_acc = eval(model, valid_loader, args, is_valid=True, device=device)
         to_log = dict(accuracy=eval_acc, learning_rate=learning_rate)
         plogger.log(to_log)
 
