@@ -66,6 +66,8 @@ def get_args():
     parser.add_argument('--warmup_epochs', type=int, default=10)
     parser.add_argument('--start_scheduler', type=int, default=0,
                         help='which epoch to start the scheduler, by default it starts as soon as warmup finishes')
+    parser.add_argument('--force_cosine_annealing', type=bool, default=False,
+                        help='Force a warmup with cosine annealing learning rate schedule regardless of model type')
 
     # learning rate for SGD
     parser.add_argument('--lr', type=float, default=0.1)
