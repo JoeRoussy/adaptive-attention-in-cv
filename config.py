@@ -43,9 +43,11 @@ def get_args():
     parser.add_argument('--z_init', type=float, default=0.1, help='mask variable which controls distance of no mask')
     parser.add_argument('--adaptive_span', type=bool, default=False)
 
+    # learning rate for adam
     parser.add_argument('--decay_factor', type=float, default=0.3, help='factor to decay lr by')
     parser.add_argument('--use_adam', type=bool, default=False, help='Whether or not to use Adam optimizer')
     parser.add_argument('--adam_lr', type=float, default=0.001)
+
     parser.add_argument('--attention_kernel', type=int, default=3)
     parser.add_argument('--test', type=bool, default=False, help='Whether or not on test set')
     parser.add_argument('--small_version', type=bool, default=False)
@@ -56,13 +58,18 @@ def get_args():
     parser.add_argument('--num-workers', type=int, default=1)
     parser.add_argument('--epochs', type=int, default=100)
 
+    # scheduler config
     parser.add_argument('--T_max', type=int, default=50)
     parser.add_argument('--eta_min', type=float, default=0.)
     parser.add_argument('--warmup_epochs', type=int, default=10)
+    parser.add_argument('--start_scheduler', type=int, default=0,
+                        help='which epoch to start the scheduler, by default it starts as soon as warmup finishes')
 
+    # learning rate for SGD
     parser.add_argument('--lr', type=float, default=0.1)
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--weight-decay', type=float, default=1e-4)
+
     parser.add_argument('--print-interval', type=int, default=100)
     parser.add_argument('--cuda', type=bool, default=False)
     parser.add_argument('--pretrained-model', type=bool, default=False)

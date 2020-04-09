@@ -176,7 +176,7 @@ def main(args, logger):
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = args.lr * (epoch + 1) / args.warmup_epochs
 
-            else:
+            elif epoch >= args.start_scheduler:
                 scheduler.step()
 
         else:
