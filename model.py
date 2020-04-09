@@ -3,23 +3,43 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from attention import AttentionConv
+from attention_augmented_conv import AugmentedConv
 
 
+#TODO Make width not increase with # groups
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, in_channels, out_channels, stride=1, groups=1, base_width=64, args=None):
+    def __init__(self, in_channels, out_channels, stride=1, base_width=64, args=None):
 
         super(Bottleneck, self).__init__()
         self.stride = stride
-        width = int(out_channels * (base_width / 64.)) * groups
+        groups = args.groups # Number of attention heads
+
+        '''
+
+        # TODO : Doubt in width, when base_width != 64?
+        width = int(out_channels * (base_width / 64.))\
+            if args.attention_conv\
+            else int(out_channels * (base_width / 64.)) * groups
+        '''
+        width = out_channels
 
         additional_args = {'groups':groups, 'R':args.R, 'z_init':args.z_init, 'adaptive_span':args.adaptive_span} \
                             if args.all_attention else {'bias': False}
 
-        layer = AttentionConv if args.all_attention else nn.Conv2d
         kernel_size = args.attention_kernel if args.all_attention else 3
         padding = 3 if kernel_size==7 else 1  #NEED TO CHANGE THIS FOR WHEN ADAPTIVE
+
+        layer = None
+
+        if args.attention_conv:
+            layer = AugmentedConv(width, width, kernel_size, args.dk, args.dv, groups, shape=width)
+        elif args.all_attention:
+            layer = AttentionConv(width, width, kernel_size=kernel_size, padding=padding, **additional_args)
+        else:
+            layer = nn.Conv2d(width, width, kernel_size=kernel_size, padding=padding, **additional_args)
+
         self.conv1 = nn.Sequential(
             nn.Conv2d(in_channels, width, kernel_size=1, bias=False),
             nn.BatchNorm2d(width),
@@ -27,8 +47,7 @@ class Bottleneck(nn.Module):
         )
 
         self.conv2 = nn.Sequential(
-            layer(width, width, kernel_size=kernel_size, padding=padding, **additional_args), #,*additional_args),
-            # AttentionConv(width, width, kernel_size=7, padding=3, groups=8),
+            layer,
             nn.BatchNorm2d(width),
             nn.ReLU(),
         )
@@ -82,11 +101,11 @@ class Model(nn.Module):
             nn.BatchNorm2d(64 // divider),
             nn.ReLU()
         )
+        self.layers = nn.ModuleList()
+        strides = [1] + [2]*3
+        for i in range(4):
+            self.layers.append(self._make_layer(block, layer_channels[i], num_blocks[i], stride=strides[i]))
 
-        self.layer1 = self._make_layer(block, layer_channels[0], num_blocks[0], stride=1)
-        self.layer2 = self._make_layer(block, layer_channels[1], num_blocks[1], stride=2)
-        self.layer3 = self._make_layer(block, layer_channels[2], num_blocks[2], stride=2)
-        self.layer4 = self._make_layer(block, layer_channels[3], num_blocks[3], stride=2)
         self.dense = nn.Linear(layer_channels[3] * block.expansion, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -97,15 +116,30 @@ class Model(nn.Module):
             self.in_places = planes * block.expansion
         return nn.Sequential(*layers)
 
+    def get_span_l1(self, args):
+        num_abs_spans = 0
+        if args.all_attention:
+            for l in self.layers:
+                for l2 in l:
+                    sum_layer = l2.conv2[0].adaptive_mask.current_val.abs().sum()
+                    num_abs_spans += sum_layer
+
+        return num_abs_spans
+
+    def clamp_span(self):
+        for l in self.layers:
+            for l2 in l:
+                l2.conv2[0].adaptive_mask.clamp_param()
+
     def forward(self, x):
         # TODO(Joe): See if there is some other modification we can make so we don't need to have different pooling kernels at the end of the model
         pooling_kernel_size = 2 if self.args.dataset == 'TinyImageNet' else 4
 
         out = self.init(x)
-        out = self.layer1(out)
-        out = self.layer2(out)
-        out = self.layer3(out)
-        out = self.layer4(out)
+        
+        for layer in self.layers:
+            out = layer(out)
+
         out = F.avg_pool2d(out, pooling_kernel_size)
         out = out.view(out.size(0), -1)
         out = self.dense(out)

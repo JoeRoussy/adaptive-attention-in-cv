@@ -4,12 +4,12 @@ import torch.nn.functional as F
 import torch.nn.init as init
 import numpy
 import math
+import time #TODO... Remove, only for testing purposes
 
 '''
 This class is taken from https://github.com/facebookresearch/adaptive-span/blob/master/adaptive_span.py
 but has been adapted to work with 2d inputs
 '''
-# TODO: Get this working with multiple heads
 class AdaptiveMask(nn.Module):
     """Soft masking function for adaptive size.
     It masks out the last K values of an input. The masking value
@@ -33,11 +33,14 @@ class AdaptiveMask(nn.Module):
 
     def forward(self, x, mask_len):
 
+        # self.current_val should be a fraction
         one_d_mask = self.mask_template + self.current_val * self._max_size
         one_d_mask = one_d_mask / self._ramp_size + 1
         one_d_mask = one_d_mask.clamp(0, 1)
         # TODO Debug: Check that indexing right dim, this should be relative to x size
         #              if kernel is 3x3 then would expect x.shape[-1] to be 3
+
+        # This line is to do the computation only for the mask_len size which are non zeros. Avoiding some compute here
         one_d_mask = one_d_mask[:,-mask_len:]
         kernel_size = 2*mask_len+1
         # Now masking 'out' (how do we count distance? One way is to start at the center pixel of the kernel and
@@ -54,19 +57,16 @@ class AdaptiveMask(nn.Module):
             indices += [[top, j] for j in range(left + 1, right + 1)]  # top minus overlap with left
             indices += [[j, right] for j in range(bottom + 1, top)]  # right minus overlap with bottom and top
             rows, cols = zip(*indices)
-            mask[rows, cols] = one_d_mask[0,i] # TODO: Check how should be indexing this when multiple groups
+            mask[rows, cols] = one_d_mask[0,i]
 
             left += 1
             right -= 1
 
+        # this trimming is already done in line 44
         #if x.size(-1) < self._max_size:
         #    # the input could have been trimmed beforehand to save computation
         #    mask = mask[:, :, -x.size(-1):]
 
-        #TODO: make sure that when I flatten mask, that it is reshaped in exactly the
-        #     same way that x was when it has it's final two dimensions flattened.
-        #     THIS IS WHERE THINGS COULD GO WRONG IF X IS FLATTENED DIFFERENTLY THAN
-        #      mask WAS.
         mask = mask.view(1,1,1,1,-1)
         x = x * mask
         x = x / (x.sum(-1, keepdim=True) + 1e-8)
@@ -97,7 +97,7 @@ class AdaptiveMask(nn.Module):
 
 class AttentionConv(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, groups=1, bias=False,
-                 R=3, z_init=4, image_size=32, adaptive_span=False):
+                 R=3, z_init=0.3, image_size=32, adaptive_span=False):
 
         super(AttentionConv, self).__init__()
         self.out_channels = out_channels
@@ -115,7 +115,9 @@ class AttentionConv(nn.Module):
 
         assert self.out_channels % self.groups == 0, "out_channels should be divisible by groups. (example: out_channels: 40, groups: 4)"
 
+
         max_mask_size = image_size / 2 # TODO(Joe): Our images are all even sizes now so this works but we should force this to be an int, i.e. int(image_size / 2) or image_size // 2
+
         self.adaptive_mask = AdaptiveMask(max_mask_size, R, init_val=z_init,
                                           shape=(groups, 1))
 
@@ -124,8 +126,6 @@ class AttentionConv(nn.Module):
         # embedding vector
         self.rel_h = nn.Parameter(torch.randn(out_channels // 2, 1, 1, self.kernel_size, 1), requires_grad=True)
         self.rel_w = nn.Parameter(torch.randn(out_channels // 2, 1, 1, 1, self.kernel_size), requires_grad=True)
-
-
 
         self.key_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=bias)
         self.query_conv = nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=bias)
@@ -172,6 +172,7 @@ class AttentionConv(nn.Module):
         k_out = self.key_conv(padded_x)
         v_out = self.value_conv(padded_x)
 
+        # this line is dividing k_out into chunks of kernel_size with stride=self.stride
         k_out = k_out.unfold(2, kernel_size, self.stride).unfold(3, kernel_size, self.stride)
         v_out = v_out.unfold(2, kernel_size, self.stride).unfold(3, kernel_size, self.stride)
         #now k_out has shape (bsz, out_channels, height, width,3,3) where kernel =(3,3) (so has keys for each block which makes it easy to apply attention)
@@ -191,31 +192,48 @@ class AttentionConv(nn.Module):
             rel_h = self.rel_h
             rel_w = self.rel_w
 
+        #TIME these splits
+        starttime= time.time()
         k_out_h, k_out_w = k_out.split(self.out_channels // 2, dim=1)
         k_out = torch.cat((k_out_h + rel_h, k_out_w + rel_w), dim=1)
+        #print('time: ', time.time())
+        #print('here')
 
         #for now suppose groups is 1, RETHINK THIS IF NOT
         #this operation just flattens the kernels in the last two dimensions (does this properly from example I did)
+        # This operation also divides the k_out, and v_out among the different heads.
         k_out = k_out.contiguous().view(batch, self.groups, self.out_channels // self.groups, height, width, -1)
         v_out = v_out.contiguous().view(batch, self.groups, self.out_channels // self.groups, height, width, -1)
 
         q_out = q_out.view(batch, self.groups, self.out_channels // self.groups, height, width, 1)
 
-        #DONT UNDERSTAND WHY HE MULTIPLIED LIKE THIS, HIS IS COMMENTED OUT
+        # ORINGINAL IMPLEMENTATION
+        # This is about 3x slower than our new implementation below for 1 group
+        #start_time = time.time()
         #out = q_out * k_out
         #out = F.softmax(out, dim=-1)
         #out = torch.einsum('bnchwk,bnchwk -> bnchw', out, v_out).view(batch, -1, height, width)
+        #print('Attention took: ', time.time()-start_time)
+        # END ORIGINAL IMPLEMENTATOIN
 
+        #OUR IMPLEMENTATION (DOES NOT WORK WITH groups > 1)
+        # Why does orginal implementation work with many groups and ours does not?
         #I think way to do this is is multiply (broadcast over last dimension) then sum dim=2 (acts as dot product)
-        #TO DO: Check that this still works with groups > 1 (I think may need to do a flattening after in this case
-        out = (q_out*k_out).sum(dim=2)
+        #TO DO: Check that this still works with groups > 1 (I think may need to do a flattening after in this case)
+        start_time = time.time()
+        out = (q_out*k_out).sum(dim=2) # Original
+        # All the channels are being merged into 1
+        #out = (q_out*k_out).sum(dim=2).squeeze(dim=1)
 
         out2 = F.softmax(out, dim=-1)
         if self.adaptive_span:
             #Note: Applying after softmax and then renormalize after mask
             out2 = self.adaptive_mask(out2, int(max_size))
 
-        out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).squeeze(dim=1) #Check if can condense this in one einstein
+        #out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).squeeze(dim=1) #Check if can condense this in one einstein
+        out3 = (out2.unsqueeze(dim=2) * v_out).sum(dim=-1).view(batch, -1, height, width)
+
+        #print('Attention took: ', time.time()-start_time)
 
         return out3
 
@@ -231,5 +249,5 @@ class AttentionConv(nn.Module):
 
 if __name__ == '__main__':
     temp = torch.randn((2, 3, 32, 32))
-    conv = AttentionConv(3, 16, kernel_size=3, padding=1)
+    conv = AttentionConv(3, 16, kernel_size=3, padding=1, adaptive_span=True)
     print(conv(temp).size())

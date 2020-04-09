@@ -6,14 +6,14 @@ import torch.optim as optim
 import os
 #from tqdm import tqdm
 #import shutil
-
+import time
 from config import get_args, get_logger
 from model import ResNet50, ResNet38, ResNet26
 from preprocess import load_data
-
+import file_writer
 
 '''
-To do:
+TODO:
 1. Use learning rate decay on optimizer (they did this in paper)
 3. Run main function with several different hyper parameters
 4. Need to save state of optimizer if reloading with momentum or Adam
@@ -22,28 +22,35 @@ To do:
 Early stopping
 '''
 
+#TODO Make training pipeline nice like in RL where logs go to different dir for each run.
+#TODO Employ early stopping as well as allowing multiple experiments in one run.
+#TODO Add ability for multi gpu
+#TODO Add dynamic attention span (span depends also on current input and layer)
 def adjust_learning_rate(optimizer, epoch, args):
     """Sets the learning rate to the initial LR decayed by 10 every 30 epochs"""
-    lr = args.lr * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+    #After 60% of we trim by factor args.decay_factor and at 80% we do this again
+    if epoch == int(0.6*float(args.epochs)) or epoch == int(0.8*float(args.epochs)):
+        for param_group in optimizer.param_groups:
+            param_group['lr'] *= args.decay_factor
 
 
-def train(model, train_loader, optimizer, criterion, epoch, args, logger):
+def train(model, train_loader, optimizer, criterion, epoch, args, logger, device):
     model.train()
 
     train_acc = 0.0
     step = 0
     for data, target in train_loader:
-        adjust_learning_rate(optimizer, epoch, args)
-        if args.cuda:
-            data, target = data.cuda(), target.cuda()
+        data, target = data.to(device), target.to(device)
 
         optimizer.zero_grad()
         output = model(data)
-        loss = criterion(output, target)
+        span_loss = model.module.get_span_l1(args)
+        loss = criterion(output, target) + args.span_penalty * span_loss
         loss.backward()
         optimizer.step()
+
+        if args.adaptive_span:
+            model.module.clamp_span()
 
         y_pred = output.data.max(1)[1]
 
@@ -51,18 +58,18 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger):
         train_acc += acc
         step += 1
         if step % args.print_interval == 0:
-            print("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc), end='')
+            print("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc))
             #logger.info("[Epoch {0:4d}] Loss: {1:2.3f} Acc: {2:.3f}%".format(epoch, loss.data, acc))
 
 
-def eval(model, test_loader, args, is_valid=True):
+def eval(model, test_loader, args, is_valid=True, device=None):
     print('evaluation ...')
     model.eval()
     correct = 0
     with torch.no_grad():
         for data, target in test_loader:
-            if args.cuda:
-                data, target = data.cuda(), target.cuda()
+            data, target = data.to(device), target.to(device)
+
             output = model(data)
             prediction = output.data.max(1)[1]
             correct += prediction.eq(target.data).sum()
@@ -95,8 +102,7 @@ def main(args, logger):
 
     print('img_size: {}, num_classes: {}'.format(args.img_size, num_classes))
     model = None
-    print('ALL ATTENTION: ',args.all_attention)
-    print('USE ADAM: ',args.use_adam)
+    print('ARGS: ', args)
     if args.model_name == 'ResNet26':
         print('Model Name: {0}'.format(args.model_name))
         model = ResNet26(num_classes=num_classes, args=args)
@@ -113,19 +119,26 @@ def main(args, logger):
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
                               weight_decay=args.weight_decay, nesterov=True)
 
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50, eta_min=0)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
+                                                           T_max=args.T_max,
+                                                           eta_min=args.eta_min)
 
     start_epoch = 1
     best_acc = 0.0
     best_epoch = 1
 
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if args.pretrained_model or args.test:
-        filename = 'model_' + str(args.dataset) + '_' + str(args.model_name)  + '_ckpt.tar'
+        filename = args.xpid + '_model_' + str(args.dataset) + '_' + str(args.model_name)  + '_ckpt.tar'
         print('filename :: ', filename)
 
-        checkpoint = torch.load(filename)
+        map_location = 'cuda' if args.cuda else None
+        checkpoint = torch.load(filename, map_location=map_location)
 
         model.load_state_dict(checkpoint['state_dict'])
+
+        model = model.to(device)
+
         optimizer.load_state_dict(checkpoint['optimizer'])
         scheduler.load_state_dict(checkpoint['scheduler'])
 
@@ -138,38 +151,50 @@ def main(args, logger):
 
         if args.test:
             #Compute test accuracy
-            if args.cuda:
-                model = model.cuda()
 
             test_acc = eval(model, test_loader, args, is_valid=False)
             print('TEST ACCURACY: ',test_acc)
             return
 
-    if args.cuda:
-        if torch.cuda.device_count() > 1:
-            model = nn.DataParallel(model)
-        model = model.cuda()
+    if not args.pretrained_model:
+
+        model = nn.DataParallel(model)
+        model = model.to(device)
 
     print("Number of model parameters: ", get_model_parameters(model))
     #logger.info("Number of model parameters: {0}".format(get_model_parameters(model)))
 
-    filename = 'model_' + str(args.dataset) + '_' + str(args.model_name) + '_ckpt.tar'
+    filename = args.xpid + '_model_' + str(args.dataset) + '_' + str(args.model_name) + '_ckpt.tar'
+    plogger = file_writer.FileWriter(
+        xpid=args.xpid, rootdir=os.path.dirname(os.path.abspath(__file__))
+    )
     print('will save model as filename :: ', filename)
 
     criterion = nn.CrossEntropyLoss()
 
 
     for epoch in range(start_epoch, args.epochs + 1):
-        train(model, train_loader, optimizer, criterion, epoch, args, logger)
 
-        #warm up for 10 steps
-        if epoch < 10:
-            optimizer.lr = args.lr * (epoch+1) / 10
+        if args.all_attention or args.attention_conv or args.force_cosine_annealing:
+            if epoch < args.warmup_epochs:
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = args.lr * (epoch + 1) / args.warmup_epochs
+
+            elif epoch >= args.start_scheduler:
+                scheduler.step()
+
         else:
-            scheduler.step()
+            adjust_learning_rate(optimizer, epoch, args)
+        learning_rate = optimizer.param_groups[0]['lr']
+        # learning_rate = [x['lr'] for x in optimizer.param_groups]
+        print('Updated lr: ', learning_rate)
+        start_time = time.time()
+        train(model, train_loader, optimizer, criterion, epoch, args, logger, device)
+        print('Epoch took: ', time.time()-start_time)
 
-        print('Updated lr: ', optimizer.lr)
-        eval_acc = eval(model, valid_loader, args, is_valid=True)
+        eval_acc = eval(model, valid_loader, args, is_valid=True, device=device)
+        to_log = dict(accuracy=eval_acc, learning_rate=learning_rate)
+        plogger.log(to_log)
 
         is_best = eval_acc > best_acc
         best_acc = max(eval_acc, best_acc)
@@ -196,7 +221,7 @@ def main(args, logger):
                 'parameters': parameters,
                 }
             torch.save(state,filename)
-
+    plogger.close()
 
 
 
@@ -204,6 +229,7 @@ def main(args, logger):
 
 if __name__ == '__main__':
     args, logger = get_args()
+    print('ARGS: ', args)
     main(args, logger)
 
     #Run on test set

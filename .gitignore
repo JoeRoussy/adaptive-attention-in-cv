@@ -1,6 +1,9 @@
 .DS_Store
-datasets/*
+__pycache__/
 data/
+datasets/
 log/
 venv/
-__pycache__
+.idea/
+example/
+latest
