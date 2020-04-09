@@ -44,10 +44,13 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger, device
 
         optimizer.zero_grad()
         output = model(data)
-        span_loss = model.get_span_l1(args)
+        span_loss = model.module.get_span_l1(args)
         loss = criterion(output, target) + args.span_penalty * span_loss
         loss.backward()
         optimizer.step()
+
+        if args.adaptive_span:
+            model.module.clamp_span()
 
         y_pred = output.data.max(1)[1]
 
@@ -94,8 +97,8 @@ def main(args, logger):
         num_classes = 10
     elif args.dataset == 'CIFAR100':
         num_classes = 100
-    elif args.dataset == 'IMAGENET':
-        num_classes = 1000
+    elif args.dataset == 'TinyImageNet':
+        num_classes = 200
 
     print('img_size: {}, num_classes: {}'.format(args.img_size, num_classes))
     model = None
@@ -156,8 +159,8 @@ def main(args, logger):
             return
 
     if not args.pretrained_model:
-        if torch.cuda.device_count() > 1:
-            model = nn.DataParallel(model)
+
+        model = nn.DataParallel(model)
         model = model.to(device)
 
     print("Number of model parameters: ", get_model_parameters(model))
@@ -174,7 +177,7 @@ def main(args, logger):
 
     for epoch in range(start_epoch, args.epochs + 1):
 
-        if args.all_attention or args.attention_conv:
+        if args.all_attention or args.attention_conv or args.force_cosine_annealing:
             if epoch < args.warmup_epochs:
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = args.lr * (epoch + 1) / args.warmup_epochs

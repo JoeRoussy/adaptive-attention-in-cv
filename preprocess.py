@@ -2,6 +2,8 @@ import torch
 
 from torchvision import datasets, transforms
 
+# NOTE: Mean and std used for normalization are known stats from the distribution of each dataset
+
 def load_data(args):
     print('Load Dataset :: {}'.format(args.dataset))
     if args.dataset == 'CIFAR10':
@@ -104,8 +106,64 @@ def load_data(args):
             num_workers=args.num_workers
         )
 
-    elif args.dataset == 'IMAGENET':
-        pass
+    elif args.dataset == 'TinyImageNet':
+        # We use the normalization stats of the full ImageNet dataset as an estimate for the stats of the
+        # TinyImageNet dataset
+        transform_train = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=(0.485, 0.456, 0.406),
+                std=(0.229, 0.224, 0.225)
+            )
+        ])
+
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=(0.485, 0.456, 0.406),
+                std=(0.229, 0.224, 0.225)
+            )
+        ])
+
+        # Only the training data has labels so we will split it up to make training, testing, and validation sets
+        train_data = datasets.ImageFolder('./datasets/processed-tiny-imagenet', transform=transform_train)
+
+        train_len = int(len(train_data)*0.9)
+        val_len = len(train_data) - train_len
+        train_set, valid_set = torch.utils.data.random_split(train_data, [train_len, val_len])
+        
+        test_len = int(len(train_set)*0.1)
+        new_train_len = len(train_set) - test_len
+        train_set, test_set = torch.utils.data.random_split(train_set, [new_train_len, test_len])
+        
+        #Don't want to apply flips and random crops to this
+        valid_set.transform = transform_test
+        test_set.transform = transform_test
+
+        train_loader = torch.utils.data.DataLoader(
+            train_set,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.num_workers
+        )
+
+        valid_loader = torch.utils.data.DataLoader(
+            valid_set,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.num_workers
+        )
+
+        test_loader = torch.utils.data.DataLoader(
+            test_set,
+            batch_size=args.batch_size,
+            shuffle=False,
+            num_workers=args.num_workers
+        )
+
+        print('TinyImageNet Loader')
+        print(train_loader)
 
     return train_loader, valid_loader, test_loader
 

@@ -194,10 +194,12 @@ class AttentionConv(nn.Module):
             rel_h = self.rel_h
             rel_w = self.rel_w
 
+        #TIME these splits
+        starttime= time.time()
         k_out_h, k_out_w = k_out.split(self.out_channels // 2, dim=1)
         k_out = torch.cat((k_out_h + rel_h, k_out_w + rel_w), dim=1)
-
-
+        #print('time: ', time.time())
+        #print('here')
 
         #for now suppose groups is 1, RETHINK THIS IF NOT
         #this operation just flattens the kernels in the last two dimensions (does this properly from example I did)
