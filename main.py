@@ -181,7 +181,7 @@ def main(args, logger):
 
         else:
             adjust_learning_rate(optimizer, epoch, args)
-        learning_rate = optimizer.param_group[0]['lr']
+        learning_rate = optimizer.param_groups[0]['lr']
         # learning_rate = [x['lr'] for x in optimizer.param_groups]
         print('Updated lr: ', learning_rate)
         start_time = time.time()
