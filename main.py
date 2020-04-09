@@ -116,6 +116,8 @@ def main(args, logger):
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum,
                               weight_decay=args.weight_decay, nesterov=True)
 
+    if args.T_max == -1:
+        args.T_max = args.epochs
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer,
                                                            T_max=args.T_max,
                                                            eta_min=args.eta_min)
