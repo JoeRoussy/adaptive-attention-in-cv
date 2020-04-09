@@ -44,13 +44,13 @@ def train(model, train_loader, optimizer, criterion, epoch, args, logger, device
 
         optimizer.zero_grad()
         output = model(data)
-        span_loss = model.get_span_l1(args)
+        span_loss = model.module.get_span_l1(args)
         loss = criterion(output, target) + args.span_penalty * span_loss
         loss.backward()
         optimizer.step()
 
         if args.adaptive_span:
-            model.clamp_span()
+            model.module.clamp_span()
 
         y_pred = output.data.max(1)[1]
 
@@ -157,8 +157,8 @@ def main(args, logger):
             return
 
     if not args.pretrained_model:
-        if torch.cuda.device_count() > 1:
-            model = nn.DataParallel(model)
+
+        model = nn.DataParallel(model)
         model = model.to(device)
 
     print("Number of model parameters: ", get_model_parameters(model))
