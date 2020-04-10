@@ -29,7 +29,7 @@ class Bottleneck(nn.Module):
                             if args.all_attention else {'bias': False}
 
         kernel_size = args.attention_kernel if args.all_attention else 3
-        padding = 3 if kernel_size==7 else 1  #NEED TO CHANGE THIS FOR WHEN ADAPTIVE
+        padding = int((kernel_size - 1) / 2)
 
         layer = None
 
