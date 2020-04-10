@@ -129,13 +129,14 @@ def load_data(args):
         # Only the training data has labels so we will split it up to make training, testing, and validation sets
         train_data = datasets.ImageFolder('./datasets/processed-tiny-imagenet', transform=transform_train)
 
-        train_len = int(len(train_data)*0.9)
-        val_len = len(train_data) - train_len
-        train_set, valid_set = torch.utils.data.random_split(train_data, [train_len, val_len])
+        train_len = int(len(train_data)*0.8)
+        val_len = int(len(train_data)*0.1)
+        test_len = int(len(train_data)*0.1)
+        train_set, valid_set, test_set = torch.utils.data.random_split(train_data, [train_len, val_len, test_len])
         
-        test_len = int(len(train_set)*0.1)
-        new_train_len = len(train_set) - test_len
-        train_set, test_set = torch.utils.data.random_split(train_set, [new_train_len, test_len])
+        # test_len = int(len(train_set)*0.1)
+        # new_train_len = len(train_set) - test_len
+        # train_set, test_set = torch.utils.data.random_split(train_set, [new_train_len, test_len])
         
         #Don't want to apply flips and random crops to this
         valid_set.transform = transform_test
