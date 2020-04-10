@@ -92,13 +92,14 @@ def get_model_parameters(model):
 
 def main(args, logger):
     train_loader, valid_loader, test_loader = load_data(args)
-    num_classes = None
-    if args.dataset == 'CIFAR10':
-        num_classes = 10
-    elif args.dataset == 'CIFAR100':
-        num_classes = 100
-    elif args.dataset == 'TinyImageNet':
-        num_classes = 200
+    num_classes = len(train_loader.dataset.dataset.classes)
+
+    # if args.dataset == 'CIFAR10':
+    #     num_classes = 10
+    # elif args.dataset == 'CIFAR100':
+    #     num_classes = 100
+    # elif args.dataset == 'TinyImageNet':
+    #     num_classes = 200
 
     print('dataset: {}, num_classes: {}'.format(args.dataset, num_classes))
     model = None
