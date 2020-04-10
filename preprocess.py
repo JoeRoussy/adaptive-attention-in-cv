@@ -31,6 +31,7 @@ def load_data(args):
         print('Len Train: {}, Len Valid: {}'.format(train_len,val_len))
         train_set, valid_set = torch.utils.data.random_split(train_data, [train_len, val_len])
         valid_set.transform = transform_test #Don't want to apply flips and random crops to this
+
         train_loader = torch.utils.data.DataLoader(
             train_set,
             batch_size=args.batch_size,
@@ -70,8 +71,22 @@ def load_data(args):
             ),
         ])
 
+        train_data = datasets.CIFAR100('data', train=True, download=True, transform=transform_train)
+        train_len = int(len(train_data)*0.9)
+        val_len = len(train_data) - train_len
+        print('Len Train: {}, Len Valid: {}'.format(train_len,val_len))
+        train_set, valid_set = torch.utils.data.random_split(train_data, [train_len, val_len])
+        valid_set.transform = transform_test #Don't want to apply flips and random crops to this
+
         train_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR100('data', train=True, download=True, transform=transform_train),
+            train_set,
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=args.num_workers
+        )
+
+        valid_loader = torch.utils.data.DataLoader(
+            valid_set,
             batch_size=args.batch_size,
             shuffle=True,
             num_workers=args.num_workers
