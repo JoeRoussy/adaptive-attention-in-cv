@@ -7,3 +7,6 @@ venv/
 .idea/
 example/
 latest
+*.csv
+*.log
+*.json
