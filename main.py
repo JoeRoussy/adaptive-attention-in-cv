@@ -100,7 +100,7 @@ def main(args, logger):
     elif args.dataset == 'TinyImageNet':
         num_classes = 200
 
-    print('img_size: {}, num_classes: {}'.format(args.img_size, num_classes))
+    print('dataset: {}, num_classes: {}'.format(args.dataset, num_classes))
     model = None
     print('ARGS: ', args)
     if args.model_name == 'ResNet26':

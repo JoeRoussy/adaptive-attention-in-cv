@@ -87,7 +87,7 @@ class Model(nn.Module):
             layer_channels = [64//divider, 128//divider, 256//divider, 512//divider]
 
         self.args = args
-        self.in_places = args.img_size
+        self.in_places = 64 if args.dataset == 'TinyImageNet' else 32
         self.all_attention = args.all_attention
         self.attention_kernel = args.attention_kernel
 
