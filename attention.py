@@ -53,7 +53,7 @@ class AdaptiveMask(nn.Module):
         # work outwards one square around it at a time filling in the mask.
         # For ex: the adjacent pixels to center pixel have same masking weight. Now pixels outside of those that are
         # adjacent have same weight and so on.
-        mask = one_d_mask.new_ones((kernel_size, kernel_size))
+        mask = one_d_mask.new_ones((self.current_val.shape[0], kernel_size, kernel_size))
         left, right = 0, kernel_size - 1
 
         for i in range(one_d_mask.shape[1]):
@@ -63,20 +63,16 @@ class AdaptiveMask(nn.Module):
             indices += [[top, j] for j in range(left + 1, right + 1)]  # top minus overlap with left
             indices += [[j, right] for j in range(bottom + 1, top)]  # right minus overlap with bottom and top
             rows, cols = zip(*indices)
-            mask[rows, cols] = one_d_mask[0,i]
+
+            mask[:, rows, cols] = one_d_mask[:,i].unsqueeze(1)
 
             left += 1
             right -= 1
 
-        # this trimming is already done in line 44
-        #if x.size(-1) < self._max_size:
-        #    # the input could have been trimmed beforehand to save computation
-        #    mask = mask[:, :, -x.size(-1):]
 
-        mask = mask.view(1,1,1,1,-1)
+        mask = mask.view(1,mask.shape[0],1,1,-1)
         x = x * mask
 
-        # TODO : Jerrod, why not take a softmax here instead?
         x = x / (x.sum(-1, keepdim=True) + 1e-8)
 
         return x
