@@ -29,11 +29,17 @@ class AdaptiveMask(nn.Module):
         self._max_size = max_size
         self._ramp_size = ramp_size
         self.current_val = nn.Parameter(torch.zeros(*shape) + init_val)
-        self.mask_template = torch.linspace(1 - int(max_size), 0, steps=int(max_size)).to(device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
+        # print('INII ', self.current_val.device)
+        mask_template = torch.linspace(1 - int(max_size), 0, steps=int(max_size))
+        self.register_buffer('mask_template', mask_template)
+        # self.mask_template = torch.linspace(1 - int(max_size), 0, steps=int(max_size))
 
     def forward(self, x, mask_len):
 
         # self.current_val should be a fraction
+        # import pdb
+        # pdb.set_trace()
+        # print('device : ', self.mask_template.device, self.current_val.device)
         one_d_mask = self.mask_template + self.current_val * self._max_size
         one_d_mask = one_d_mask / self._ramp_size + 1
         one_d_mask = one_d_mask.clamp(0, 1)
@@ -47,7 +53,7 @@ class AdaptiveMask(nn.Module):
         # work outwards one square around it at a time filling in the mask.
         # For ex: the adjacent pixels to center pixel have same masking weight. Now pixels outside of those that are
         # adjacent have same weight and so on.
-        mask = torch.ones(kernel_size, kernel_size).to(device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
+        mask = one_d_mask.new_ones((kernel_size, kernel_size))
         left, right = 0, kernel_size - 1
 
         for i in range(one_d_mask.shape[1]):
