@@ -126,8 +126,8 @@ class AttentionConv(nn.Module):
 
         max_mask_size = image_size / 2 # TODO(Joe): Our images are all even sizes now so this works but we should force this to be an int, i.e. int(image_size / 2) or image_size // 2
 
-        self.adaptive_mask = AdaptiveMask(max_mask_size, R, init_val=z_init,
-                                          shape=(groups, 1))
+        # TODO HIGH : This value of 5 is hardcoded for CIFAR100
+        self.adaptive_mask = AdaptiveMask(5, R, init_val=z_init, shape=(groups, 1))
 
         # Note the different usage of kernel_size for rel_w and rel_h. They are 2 one dimensional arrays
         # Reason they divide by two is that in the paper they just concat rel_h and rel_w to be the positional
@@ -165,6 +165,7 @@ class AttentionConv(nn.Module):
         batch, channels, height, width = x.size()
         max_size = None
         if self.adaptive_span:
+            # print('z value ',self.adaptive_mask.current_val)
             max_size = self.adaptive_mask.get_current_max_size()
             kernel_size = int(2 * max_size + 1) # compute smallest kernel_size we can compute based on mask
             padding = int((kernel_size - 1) / 2)
@@ -203,6 +204,7 @@ class AttentionConv(nn.Module):
         #TIME these splits
         starttime= time.time()
         k_out_h, k_out_w = k_out.split(self.out_channels // 2, dim=1)
+        # print('shapes : k_out_h : {} rel_h : {} k_out_w : {} rel_w : {}'.format(k_out_h.shape, rel_h.shape, k_out_w.shape, rel_w.shape))
         k_out = torch.cat((k_out_h + rel_h, k_out_w + rel_w), dim=1)
         #print('time: ', time.time())
         #print('here')
