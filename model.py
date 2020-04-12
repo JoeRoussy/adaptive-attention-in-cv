@@ -83,7 +83,7 @@ class Model(nn.Module):
         layer_channels = None #These two sets of channels give approximately equal #params between all_attention and all_conv
         if args.all_attention:
             #layer_channels = [64,128,128,256,256]
-            layer_channels = [120, 128, 128, 256]
+            layer_channels = [96, 128, 128, 256]
         else:
             layer_channels = [64//divider, 128//divider, 256//divider, 512//divider]
 
