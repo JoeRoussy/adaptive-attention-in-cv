@@ -55,6 +55,7 @@ def get_args():
     parser.add_argument('--dataset', type=str, default='CIFAR10', help='CIFAR10, CIFAR100, MNIST, TinyImageNet')
     parser.add_argument('--test', type=bool, default=False, help='Whether or not on test set')
     parser.add_argument('--small_version', type=bool, default=False)
+    parser.add_argument('--smallest_version', type=bool, default=False)
     parser.add_argument('--model-name', type=str, default='ResNet26', help='ResNet26, ResNet38, ResNet50')
     parser.add_argument('--batch-size', type=int, default=25)
     parser.add_argument('--num-workers', type=int, default=1)

@@ -81,11 +81,13 @@ class Model(nn.Module):
         super(Model, self).__init__()
         divider = 2 #if args.small_version else 1
         layer_channels = None #These two sets of channels give approximately equal #params between all_attention and all_conv
+        
         if args.all_attention:
             #layer_channels = [64,128,128,256,256]
-            layer_channels = [96, 128, 128, 256]
+            layer_channels = [64, 64, 256] if args.smallest_version else [96, 128, 128, 256]
         else:
-            layer_channels = [64//divider, 128//divider, 256//divider, 512//divider]
+            layer_channels = [64, 64, 200] if args.smallest_version\
+                else [64//divider, 128//divider, 256//divider, 512//divider]
 
         self.args = args
         self.in_places = 64 if args.dataset == 'TinyImageNet' else 32
@@ -104,11 +106,11 @@ class Model(nn.Module):
         )
         self.layers = nn.ModuleList()
 
-        strides = [1] + [2]*3
-        for i in range(4):
+        strides = [2]*3 if args.smallest_version else [1] + [2]*3
+        for i in range(len(layer_channels)):
             self.layers.append(self._make_layer(block, layer_channels[i], num_blocks[i], stride=strides[i]))
 
-        self.dense = nn.Linear(layer_channels[3] * block.expansion, num_classes)
+        self.dense = nn.Linear(layer_channels[-1] * block.expansion, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
@@ -150,7 +152,9 @@ class Model(nn.Module):
 
 
 def ResNet26(num_classes=1000, args=None):
-    if args.small_version:
+    if args.smallest_version:
+        num_blocks = [1]*3
+    elif args.small_version:
         #Decided to use same architecture for both all conv and all attention for better comparison
         num_blocks = [1]*4 #[1, 2, 2, 1] if args.all_attention else [1]*4
     else:
