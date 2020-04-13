@@ -79,11 +79,11 @@ class Bottleneck(nn.Module):
 class Model(nn.Module):
     def __init__(self, block, num_blocks, num_classes=1000, args=None):
         super(Model, self).__init__()
-        divider = 2 if args.small_version else 1
+        divider = 2 #if args.small_version else 1
         layer_channels = None #These two sets of channels give approximately equal #params between all_attention and all_conv
         if args.all_attention:
             #layer_channels = [64,128,128,256,256]
-            layer_channels = [120, 128, 128, 256]
+            layer_channels = [96, 128, 128, 256]
         else:
             layer_channels = [64//divider, 128//divider, 256//divider, 512//divider]
 
@@ -103,6 +103,7 @@ class Model(nn.Module):
             nn.ReLU()
         )
         self.layers = nn.ModuleList()
+
         strides = [1] + [2]*3
         for i in range(4):
             self.layers.append(self._make_layer(block, layer_channels[i], num_blocks[i], stride=strides[i]))
@@ -153,7 +154,8 @@ def ResNet26(num_classes=1000, args=None):
         #Decided to use same architecture for both all conv and all attention for better comparison
         num_blocks = [1]*4 #[1, 2, 2, 1] if args.all_attention else [1]*4
     else:
-        num_blocks = [1, 2, 4, 1]
+        num_blocks = [1,3,4,1] #Now all attention is 3.02M and CNN is 3.09 M params
+        #num_blocks = [1, 2, 4, 1]
 
     return Model(Bottleneck, num_blocks, num_classes=num_classes, args=args)
 
