@@ -62,6 +62,7 @@ def get_args():
     parser.add_argument('--epochs', type=int, default=100)
 
     # scheduler config
+    parser.add_argument('--no_annealing', type=bool, default=False)
     parser.add_argument('--T_max', type=int, default=-1, help='default equals total number of epochs')
     parser.add_argument('--eta_min', type=float, default=0.)
     parser.add_argument('--warmup_epochs', type=int, default=10)

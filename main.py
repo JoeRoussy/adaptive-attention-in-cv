@@ -138,8 +138,9 @@ def main(args, logger):
         map_location = 'cuda' if args.cuda else None
         checkpoint = torch.load(filename, map_location=map_location)
 
+        model = nn.DataParallel(model)
         model.load_state_dict(checkpoint['state_dict'])
-
+        print('MADE IT')
         model = model.to(device)
 
         optimizer.load_state_dict(checkpoint['optimizer'])
@@ -158,6 +159,7 @@ def main(args, logger):
             test_acc = eval(model, test_loader, args, is_valid=False)
             print('TEST ACCURACY: ',test_acc)
             return
+
 
     if not args.pretrained_model:
 
@@ -179,7 +181,9 @@ def main(args, logger):
     for epoch in range(start_epoch, args.epochs + 1):
 
         if args.all_attention or args.attention_conv or args.force_cosine_annealing:
-            if epoch < args.warmup_epochs:
+            if args.no_annealing:
+                optimizer.param_groups[0]['lr'] = args.lr
+            elif epoch < args.warmup_epochs:
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = args.lr * (epoch + 1) / args.warmup_epochs
 
