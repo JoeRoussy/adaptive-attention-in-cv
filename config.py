@@ -53,6 +53,8 @@ def get_args():
 
     
     parser.add_argument('--dataset', type=str, default='CIFAR10', help='CIFAR10, CIFAR100, MNIST, TinyImageNet')
+    parser.add_argument('--subset', type=float, default=1.0, help='proportion of dataset to use')
+
     parser.add_argument('--test', type=bool, default=False, help='Whether or not on test set')
     parser.add_argument('--small_version', type=bool, default=False)
     parser.add_argument('--smallest_version', type=bool, default=False)

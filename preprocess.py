@@ -72,6 +72,10 @@ def load_data(args):
         ])
 
         train_data = datasets.CIFAR100('data', train=True, download=True, transform=transform_train)
+
+        actual_to_be_used = int(len(train_data) * args.subset)
+        train_data, _ = torch.utils.data.random_split(train_data, [actual_to_be_used, len(train_data) - actual_to_be_used])
+
         train_len = int(len(train_data)*0.9)
         val_len = len(train_data) - train_len
         print('Len Train: {}, Len Valid: {}'.format(train_len,val_len))
