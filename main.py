@@ -138,6 +138,7 @@ def main(args, logger):
         map_location = 'cuda' if args.cuda else None
         checkpoint = torch.load(filename, map_location=map_location)
 
+        model = nn.DataParallel(model)
         model.load_state_dict(checkpoint['state_dict'])
         print('MADE IT')
         model = model.to(device)
