@@ -160,7 +160,7 @@ def main(args, logger):
             print('TEST ACCURACY: ',test_acc)
             return
 
-    exit()
+
     if not args.pretrained_model:
 
         model = nn.DataParallel(model)
