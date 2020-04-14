@@ -139,7 +139,7 @@ def main(args, logger):
         checkpoint = torch.load(filename, map_location=map_location)
 
         model.load_state_dict(checkpoint['state_dict'])
-
+        print('MADE IT')
         model = model.to(device)
 
         optimizer.load_state_dict(checkpoint['optimizer'])
@@ -159,6 +159,7 @@ def main(args, logger):
             print('TEST ACCURACY: ',test_acc)
             return
 
+    exit()
     if not args.pretrained_model:
 
         model = nn.DataParallel(model)
