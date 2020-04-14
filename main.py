@@ -92,7 +92,9 @@ def get_model_parameters(model):
 
 def main(args, logger):
     train_loader, valid_loader, test_loader = load_data(args)
-    num_classes = len(train_loader.dataset.dataset.classes)
+
+    # TODO : THIS WILL NOT WORK OUT FOR OTHER DATASETS DUE TO THE WAY WE SPLIT WITH SUBSET FLAG IN CIFAR100
+    num_classes = len(train_loader.dataset.dataset.dataset.classes)
 
     # if args.dataset == 'CIFAR10':
     #     num_classes = 10
