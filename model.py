@@ -46,11 +46,18 @@ class Bottleneck(nn.Module):
             nn.ReLU(),
         )
 
+        # self.conv2 = nn.Sequential(
+        #     layer,
+        #     nn.BatchNorm2d(width),
+        #     nn.ReLU(),
+        # )
         self.conv2 = nn.Sequential(
             layer,
-            nn.BatchNorm2d(width),
-            nn.ReLU(),
+            nn.Dropout(0.1)
         )
+        # TODO : Check if relu is needed at the end of MHA
+        self.norm = nn.BatchNorm2d(width)
+
         self.conv3 = nn.Sequential(
             nn.Conv2d(width, self.expansion * out_channels, kernel_size=1, bias=False),
             nn.BatchNorm2d(self.expansion * out_channels),
@@ -65,7 +72,9 @@ class Bottleneck(nn.Module):
 
     def forward(self, x):
         out = self.conv1(x)
-        out = self.conv2(out)
+        out += self.conv2(out)
+        out = self.norm(out)
+
         out = self.conv3(out)
         if self.stride >= 2:
             out = F.avg_pool2d(out, (self.stride, self.stride))
