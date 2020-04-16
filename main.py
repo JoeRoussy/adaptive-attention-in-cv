@@ -158,7 +158,7 @@ def main(args, logger):
         if args.test:
             #Compute test accuracy
 
-            test_acc = eval(model, test_loader, args, is_valid=False)
+            test_acc = eval(model, test_loader, args, is_valid=False, device=device)
             print('TEST ACCURACY: ',test_acc)
             return
 
