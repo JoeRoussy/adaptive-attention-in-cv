@@ -181,19 +181,15 @@ def count_bootleneck(m, x, y):
     m.total_ops += torch.DoubleTensor([int(total_ops)])
 
 
-    # out += m.conv2(out)
     # conv2 consists of a layer and dropouts
     if args.all_attention:
         total_ops = count_attention_flops(m.conv2[0], out)
         out = m.conv2(out)
-        m.total_ops += torch.DoubleTensor([int(total_ops)]) + torch.DoubleTensor([int(out.numel())])
+        m.total_ops += torch.DoubleTensor([int(total_ops)])
     else:
         total_ops, out = count_conv2d(m.conv2[0], out)
-        m.total_ops += torch.DoubleTensor([int(total_ops)]) + torch.DoubleTensor([int(out.numel())])
-
-    total_ops = count_batchnorm2d(m.norm, out)
-    m.total_ops += torch.DoubleTensor([int(total_ops)])
-    out = m.norm(out)
+        m.total_ops += torch.DoubleTensor([int(total_ops)])
+    print('OPS from specific ', total_ops)
 
     # out = m.conv3(out)
     # self.conv3 = nn.Sequential(
