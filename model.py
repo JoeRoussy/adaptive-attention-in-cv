@@ -84,7 +84,8 @@ class Model(nn.Module):
         
         if args.all_attention:
             #layer_channels = [64,128,128,256,256]
-            layer_channels = [64, 64, 256] if args.smallest_version else [96, 128, 128, 256]
+            # TODO HIGH HIGH: THIS NEEDS TO BE ROLLED BACK IF THERES NO ADV
+            layer_channels = [64, 64, 256] if args.smallest_version else [64//divider, 128//divider, 256//divider, 512//divider] # [96, 128, 128, 256]
         else:
             layer_channels = [64, 64, 200] if args.smallest_version\
                 else [64//divider, 128//divider, 256//divider, 512//divider]
