@@ -169,19 +169,25 @@ def count_bootleneck(m, x, y):
     #     nn.ReLU(),
     # )
 
+    conv1_count = 0
     total_ops, out = count_conv2d(m.conv1[0], x)
     m.total_ops += torch.DoubleTensor([int(total_ops)])
+    conv1_count += total_ops
 
     total_ops = count_batchnorm2d(m.conv1[1], out)
     m.total_ops += torch.DoubleTensor([int(total_ops)])
     out = m.conv1[1](out)
+    conv1_count += total_ops
 
     out = F.relu(out)
     total_ops = out.numel()
     m.total_ops += torch.DoubleTensor([int(total_ops)])
+    conv1_count += total_ops
+    print('conv1 : ', conv1_count)
 
 
-    # conv2 consists of a layer and dropouts
+    conv2_count = 0
+    # conv2 consists of a layer, batchnorm and relu
     if args.all_attention:
         total_ops = count_attention_flops(m.conv2[0], out)
         out = m.conv2(out)
@@ -189,24 +195,40 @@ def count_bootleneck(m, x, y):
     else:
         total_ops, out = count_conv2d(m.conv2[0], out)
         m.total_ops += torch.DoubleTensor([int(total_ops)])
-    print('OPS from specific ', total_ops)
+    conv2_count += total_ops
+
+    total_ops = count_batchnorm2d(m.conv2[1], out)
+    m.total_ops += torch.DoubleTensor([int(total_ops)])
+    out = m.conv2[1](out)
+    conv2_count += total_ops
+
+    out = F.relu(out)
+    total_ops = out.numel()
+    m.total_ops += torch.DoubleTensor([int(total_ops)])
+    conv2_count += total_ops
+
+    print('conv2 : ', conv2_count)
 
     # out = m.conv3(out)
     # self.conv3 = nn.Sequential(
     #     nn.Conv2d(width, self.expansion * out_channels, kernel_size=1, bias=False),
     #     nn.BatchNorm2d(self.expansion * out_channels),
     # )
+    conv3_count = 0
     total_ops, out = count_conv2d(m.conv3[0], out)
     m.total_ops += torch.DoubleTensor([int(total_ops)])
+    conv3_count += total_ops
 
     total_ops = count_batchnorm2d(m.conv3[1], out)
     m.total_ops += torch.DoubleTensor([int(total_ops)])
     out = m.conv3[1](out)
+    conv3_count += total_ops
 
+    print('conv3 : ', conv3_count)
 
     if m.stride >= 2:
-        out = F.avg_pool2d(out, (m.stride, m.stride))
         total_ops = count_avgpool2d(out)
+        out = F.avg_pool2d(out, (m.stride, m.stride))
         m.total_ops += torch.DoubleTensor([int(total_ops)])
 
     # out += m.shortcut(x)
@@ -221,7 +243,7 @@ def count_bootleneck(m, x, y):
     m.total_ops += torch.DoubleTensor([int(total_ops)])
     out += m.shortcut[1](out_1)
     # out += m.shortcut(x)
-    total_ops = x.numel()
+    total_ops = out.numel()
     m.total_ops += torch.DoubleTensor([int(total_ops)])
 
     out = F.relu(out)
