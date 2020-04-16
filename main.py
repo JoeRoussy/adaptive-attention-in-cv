@@ -155,10 +155,14 @@ def main(args, logger):
         print('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
         #logger.info('Load model, Parameters: {0}, Start_epoch: {1}, Acc: {2}'.format(model_parameters, start_epoch, best_acc))
 
+        if args.adaptive_span:
+            #print max span of each layer
+            pass
+
         if args.test:
             #Compute test accuracy
 
-            test_acc = eval(model, test_loader, args, is_valid=False)
+            test_acc = eval(model, test_loader, args, is_valid=False, device=device)
             print('TEST ACCURACY: ',test_acc)
             return
 

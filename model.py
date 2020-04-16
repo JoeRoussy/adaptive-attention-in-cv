@@ -130,6 +130,11 @@ class Model(nn.Module):
 
         return num_abs_spans
 
+    def print_max_spans(self):
+        #prints max span for each layer
+        l = []
+        for
+
     def clamp_span(self):
         for l in self.layers:
             for l2 in l:
