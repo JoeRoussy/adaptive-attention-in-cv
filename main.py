@@ -11,6 +11,9 @@ from config import get_args, get_logger
 from model import ResNet50, ResNet38, ResNet26
 from preprocess import load_data
 import file_writer
+from thop import profile
+from model import Bottleneck
+from flop_count import count_bootleneck
 
 '''
 TODO:
@@ -144,6 +147,10 @@ def main(args, logger):
         model.load_state_dict(checkpoint['state_dict'])
         print('MADE IT')
         model = model.to(device)
+
+        dummy_input = torch.randn((2, 3, 32, 32))
+        macs, params = profile(model, inputs=(dummy_input,), custom_ops={Bottleneck: count_bootleneck}, verbose=True)
+        print('FLOPS : {}, PARAMS : {}'.format(macs, params))
 
         optimizer.load_state_dict(checkpoint['optimizer'])
         scheduler.load_state_dict(checkpoint['scheduler'])
