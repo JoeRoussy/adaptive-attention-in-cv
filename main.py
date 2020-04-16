@@ -153,6 +153,9 @@ def main(args, logger):
         print('FLOPS : {}, PARAMS : {}'.format(macs, params))
 
         optimizer.load_state_dict(checkpoint['optimizer'])
+        # reset to this learning rate given
+        optimizer.param_groups[0]['lr'] = args.lr
+
         scheduler.load_state_dict(checkpoint['scheduler'])
 
         start_epoch = checkpoint['epoch']
