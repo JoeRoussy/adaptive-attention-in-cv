@@ -190,7 +190,7 @@ def count_bootleneck(m, x, y):
     # conv2 consists of a layer, batchnorm and relu
     if args.all_attention:
         total_ops = count_attention_flops(m.conv2[0], out)
-        out = m.conv2(out)
+        out = m.conv2[0](out)
         m.total_ops += torch.DoubleTensor([int(total_ops)])
     else:
         total_ops, out = count_conv2d(m.conv2[0], out)
