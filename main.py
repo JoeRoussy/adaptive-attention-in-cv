@@ -151,7 +151,7 @@ def main(args, logger):
         dummy_input = torch.randn((2, 3, 32, 32))
         dummy_input = dummy_input.to(device)
         #macs, params = profile(model, inputs=(dummy_input,), custom_ops={Bottleneck: count_bootleneck}, verbose=True)
-        print('FLOPS : {}, PARAMS : {}'.format(macs, params))
+        #print('FLOPS : {}, PARAMS : {}'.format(macs, params))
 
         max_spans = []
         if args.adaptive_attention:
