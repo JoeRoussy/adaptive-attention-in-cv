@@ -160,7 +160,8 @@ def count_avgpool2d(y):
 
 def count_bootleneck(m, x, y):
     x = x[0]
-
+    # import pdb
+    # pdb.set_trace()
     # out = m.conv1(x)
     # conv1 consists of 3 layers
     # self.conv1 = nn.Sequential(
@@ -188,7 +189,8 @@ def count_bootleneck(m, x, y):
 
     conv2_count = 0
     # conv2 consists of a layer, batchnorm and relu
-    if args.all_attention:
+    if 'attention' in m.conv2[0]._get_name().lower():
+        # if args.all_attention:
         total_ops = count_attention_flops(m.conv2[0], out)
         out = m.conv2[0](out)
         m.total_ops += torch.DoubleTensor([int(total_ops)])

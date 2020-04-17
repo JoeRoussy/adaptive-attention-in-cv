@@ -14,6 +14,7 @@ import file_writer
 from thop import profile
 from model import Bottleneck
 from flop_count import count_bootleneck
+import copy
 
 '''
 TODO:
@@ -147,10 +148,10 @@ def main(args, logger):
         model.load_state_dict(checkpoint['state_dict'])
         print('MADE IT')
         model = model.to(device)
-
+        
         dummy_input = torch.randn((2, 3, 32, 32))
         dummy_input = dummy_input.to(device)
-        macs, params = profile(model, inputs=(dummy_input,), custom_ops={Bottleneck: count_bootleneck}, verbose=True)
+        macs, params = profile(copy.deepcopy(model.module), inputs=(dummy_input,), custom_ops={Bottleneck: count_bootleneck}, verbose=True)
         print('FLOPS : {}, PARAMS : {}'.format(macs, params))
 
         optimizer.load_state_dict(checkpoint['optimizer'])
