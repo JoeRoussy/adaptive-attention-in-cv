@@ -154,6 +154,16 @@ def main(args, logger):
         macs, params = profile(copy.deepcopy(model.module), inputs=(dummy_input,), custom_ops={Bottleneck: count_bootleneck}, verbose=True)
         print('FLOPS : {}, PARAMS : {}'.format(macs, params))
 
+        max_spans = []
+        if args.adaptive_span:
+            #print out max z value per layer as a list
+            for layer in model.module.layers:
+                for block in layer:
+                    max_span = block.conv2[0].adaptive_mask.get_current_max_size()
+                    max_spans.append(max_span)
+
+            print('MAX SPANS: ', max_spans)
+
         optimizer.load_state_dict(checkpoint['optimizer'])
         # reset to this learning rate given
         optimizer.param_groups[0]['lr'] = args.lr
