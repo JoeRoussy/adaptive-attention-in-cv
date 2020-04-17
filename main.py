@@ -149,6 +149,7 @@ def main(args, logger):
         model = model.to(device)
 
         dummy_input = torch.randn((2, 3, 32, 32))
+        dummy_input = dummy_input.to(device)
         macs, params = profile(model, inputs=(dummy_input,), custom_ops={Bottleneck: count_bootleneck}, verbose=True)
         print('FLOPS : {}, PARAMS : {}'.format(macs, params))
 
