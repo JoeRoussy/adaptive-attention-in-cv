@@ -154,7 +154,7 @@ def main(args, logger):
         #print('FLOPS : {}, PARAMS : {}'.format(macs, params))
 
         max_spans = []
-        if args.adaptive_attention:
+        if args.adaptive_span:
             #print out max z value per layer as a list
             for layer in model.module.layers:
                 for block in layer:
