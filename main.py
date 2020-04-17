@@ -159,7 +159,7 @@ def main(args, logger):
             for layer in model.module.layers:
                 for block in layer:
                     max_span = block.conv2[0].adaptive_mask.get_current_max_size()
-                    max_spans.append(max_span.item())
+                    max_spans.append(max_span)
 
             print('MAX SPANS: ', max_spans)
 
