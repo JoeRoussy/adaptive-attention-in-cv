@@ -227,7 +227,10 @@ def count_bootleneck(m, x, y):
     conv3_count += total_ops
 
     print('conv3 : ', conv3_count)
-
+    
+    # import pdb
+    # pdb.set_trace()
+    
     if m.stride >= 2:
         total_ops = count_avgpool2d(out)
         out = F.avg_pool2d(out, (m.stride, m.stride))
@@ -238,12 +241,14 @@ def count_bootleneck(m, x, y):
     #     nn.Conv2d(in_channels, self.expansion * out_channels, kernel_size=1, stride=stride, bias=False),
     #     nn.BatchNorm2d(self.expansion * out_channels)
     # )
-    total_ops, out_1 = count_conv2d(m.shortcut[0], x)
-    m.total_ops += torch.DoubleTensor([int(total_ops)])
+    
+    if len(m.shortcut) > 0:
+        total_ops, out_1 = count_conv2d(m.shortcut[0], x)
+        m.total_ops += torch.DoubleTensor([int(total_ops)])
 
-    total_ops = count_batchnorm2d(m.shortcut[1], out_1)
-    m.total_ops += torch.DoubleTensor([int(total_ops)])
-    out += m.shortcut[1](out_1)
+        total_ops = count_batchnorm2d(m.shortcut[1], out_1)
+        m.total_ops += torch.DoubleTensor([int(total_ops)])
+        out += m.shortcut[1](out_1)
     # out += m.shortcut(x)
     total_ops = out.numel()
     m.total_ops += torch.DoubleTensor([int(total_ops)])
