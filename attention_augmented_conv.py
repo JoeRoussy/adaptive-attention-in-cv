@@ -1,3 +1,5 @@
+# This code is largely based on code in https://github.com/leaderj1001/Attention-Augmented-Conv2d
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
