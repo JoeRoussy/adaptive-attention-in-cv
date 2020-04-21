@@ -3,13 +3,13 @@
 In this experiment we first try replicating results from [Stand-Alone Self-Attention in Vision Models](https://arxiv.org/abs/1906.05909).
 
 In this work, we propose a novel method based on the [Adaptive Attention Span](https://arxiv.org/abs/1905.07799) for learning a local self attention kernel size.
-We compare this with [Local Attention](https://arxiv.org/abs/1906.05909) kernel, convolution kernels on CIFAR100.
+We compare this with [Local Attention](https://arxiv.org/abs/1906.05909) kernels as well as convolution kernels on CIFAR100.
 Our codes for Adaptive Attention Span in 2D is originally inspired from [FAIR's implementation](https://github.com/facebookresearch/adaptive-span/blob/master/adaptive_span.py).
 Code for self-attention in convolutions is loosely based on [this repo](https://github.com/leaderj1001/Stand-Alone-Self-Attention) by [leaderj1001](https://github.com/leaderj1001).
 
-The arxiv preprint for this work will be uploaded once it has been made public.
+We have published our [results on arXiv](https://arxiv.org/abs/2004.08708).
 
-### Steps to replicate what we did on your own machine
+### Steps to replicate
 1. Clone this repository
 2. Get the requirements ```pip install -r requirements.txt```
 
@@ -18,7 +18,7 @@ Execution notes:
 * Some important flags are,
     * To run on GPU, use the flag ```--cuda True```, otherwise do not use this option.
     * Use flags ```--smallest_version True``` to run the smallest version. ```--small_version True``` to run the medium model and no flags to use the large model
-    * A description of each of the small, medium and large is given in Appendix A.3 of our paper
+    * A description of each of the small, medium and large is given in Appendix A.3 of our [paper](https://arxiv.org/abs/2004.08708)
 * For more details on other flags, see the file config.py which has descriptions for each.
 
 ### Snippets
