@@ -48,6 +48,7 @@ python main.py --eta_min 0 --warmup_epochs 10 --lr 0.2 --batch-size 50 \
 
 ### Reference
 If you find this repository useful, do cite it with 
+```
 @misc{parker2020adaptive,
     title={Adaptive Attention Span in Computer Vision},
     author={Jerrod Parker and Shakti Kumar and Joe Roussy},
@@ -56,3 +57,4 @@ If you find this repository useful, do cite it with
     archivePrefix={arXiv},
     primaryClass={cs.CV}
 }
+```
