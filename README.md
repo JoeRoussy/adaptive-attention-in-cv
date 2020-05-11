@@ -45,3 +45,14 @@ python main.py --eta_min 0 --warmup_epochs 10 --lr 0.2 --batch-size 50 \
 --small_version True --cuda True --num-workers 2 --T_max 100 --xpid best_cnn_medium \
 --dataset CIFAR100 --force_cosine_annealing True --weight-decay 0.0001
 ```
+
+### Reference
+If you find this repository useful, do cite it with 
+@misc{parker2020adaptive,
+    title={Adaptive Attention Span in Computer Vision},
+    author={Jerrod Parker and Shakti Kumar and Joe Roussy},
+    year={2020},
+    eprint={2004.08708},
+    archivePrefix={arXiv},
+    primaryClass={cs.CV}
+}
