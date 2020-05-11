@@ -1,13 +1,14 @@
 # Adaptive Attention Span in Computer Vision
 
-In this experiment we first try replicating results from [Stand-Alone Self-Attention in Vision Models](https://arxiv.org/abs/1906.05909).
+Official implementation of [Adaptive Attention Span in Computer Vision](https://arxiv.org/abs/2004.08708).
 
-In this work, we propose a novel method based on the [Adaptive Attention Span](https://arxiv.org/abs/1905.07799) for learning a local self attention kernel size.
+In this work we first try replicating results from [Stand-Alone Self-Attention in Vision Models](https://arxiv.org/abs/1906.05909).
+
+Next we propose a novel method based on the [Adaptive Attention Span](https://arxiv.org/abs/1905.07799) for learning a local self attention kernel size.
 We compare this with [Local Attention](https://arxiv.org/abs/1906.05909) kernels as well as convolution kernels on CIFAR100.
 Our codes for Adaptive Attention Span in 2D is originally inspired from [FAIR's implementation](https://github.com/facebookresearch/adaptive-span/blob/master/adaptive_span.py).
 Code for self-attention in convolutions is loosely based on [this repo](https://github.com/leaderj1001/Stand-Alone-Self-Attention) by [leaderj1001](https://github.com/leaderj1001).
 
-We have published our [results on arXiv](https://arxiv.org/abs/2004.08708).
 
 ### Steps to replicate
 1. Clone this repository
